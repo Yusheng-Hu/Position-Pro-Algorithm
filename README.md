@@ -16,3 +16,8 @@ The core C++ implementations of the algorithms can be found here:
 
 ## 🛠️ Usage
 These algorithms achieve $O(n)$ time complexity by optimizing the indexing logic $D[i]$, providing a more efficient alternative to the classic Myrvold-Ruskey method.
+
+## 📚 Background & Acknowledgments
+The **Position Pro (PP)** algorithm is built upon the foundational work of **Wendy Myrvold and Frank Ruskey**, specifically their $O(n)$ unranking algorithm (2001). 
+
+While the MR algorithm uses a specific swap-based approach, the PP method introduces a more intuitive indexing logic $D[i]$ that simplifies the implementation and enhances understanding of the mapping process.
