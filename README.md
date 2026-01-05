@@ -13,7 +13,7 @@ Official implementation and interactive visualizations of the **Position Pro (PP
 ## 💻 Source Code
 The core C++ implementations of the algorithms can be found here:
 * **[map_perm_algorithms.cpp](./map_perm_algorithms.cpp)**: Includes `Position_unrank`, `Position_rank`, `PositionPro_unrank`, and `PositionPro_rank`.
-`permpro_full.cpp` serves as a high-performance reference implementation for generating all permutations of a set using the **PositionPro** iterative algorithm. 
+* **[permpro_full.cpp](./permpro_full.cpp)**: Serves as a high-performance reference implementation for generating all permutations of a set using the **PositionPro** iterative algorithm. 
 
 ## 🛠️ Usage
 These algorithms achieve $O(n)$ time complexity by optimizing the indexing logic $D[i]$, providing a more efficient alternative to the classic Myrvold-Ruskey method.
