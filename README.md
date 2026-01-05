@@ -7,7 +7,7 @@ Official implementation and interactive visualizations of the **Position Pro (PP
 * **[View Position Pro (PP) Algorithm Animation](https://yusheng-hu.github.io/Position-Pro-Algorithm/PositionPro.html)**
 
 ## 📄 Academic Status
-* **Preprint**: Submitted to TechRxiv (In Moderation)
+* **Preprint**: Submitted to research square
 * **Status**: $O(n)$ complexity achieved, improving upon the classic Myrvold-Ruskey logic.
 
 ## 💻 Source Code
