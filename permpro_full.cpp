@@ -12,13 +12,15 @@
  * - Platform: Windows (Requires <windows.h>)
  * - Compiler: GCC/MinGW (supports __builtin_LINE) or MSVC
  * * Usage:
- * Adjust the 'N' macro to change the permutation set size. 
- * Note: N > 14 may require significant time.
+ * Adjust the 'PERM_SIZE' macro to change the permutation set size. 
+ * Note: PERM_SIZE > 14 may require significant time.
  */
 #include "stdio.h"
 #include "time.h"
 #include "windows.h" // Add Windows API header file
-#define N 14
+#ifndef PERM_SIZE
+#define PERM_SIZE 12
+#endif
 #define LittleNumber 5
 
 // #define DEBUG
@@ -41,7 +43,7 @@ int main() {
   unsigned long long ProcessCount[200] = {0};
   int volatile i = 0;
   int j = 0;
-  int C[N] = {0}, D[N] = {0}, M[N] = {0};
+  int C[PERM_SIZE] = {0}, D[PERM_SIZE] = {0}, M[PERM_SIZE] = {0};
 
   // High precision timer variables
   LARGE_INTEGER start, finish, frequency;
@@ -54,33 +56,33 @@ int main() {
 
   while (C[0] < 1) {
     COUNT_PROCESS();
-    for (; i < N-1; ++i) {
+    for (; i < PERM_SIZE-1; ++i) {
       COUNT_PROCESS();
       D[i] = D[C[i]];
       D[C[i]] = i;
     }
 
-    for (int ii = 0; ii < N; ii++)
+    for (int ii = 0; ii < PERM_SIZE; ii++)
     {
       COUNT_PROCESS();
-      D[N-1] = D[ii];
-      D[ii] = N-1;
-      checksum += D[N-1];
+      D[PERM_SIZE-1] = D[ii];
+      D[ii] = PERM_SIZE-1;
+      checksum += D[PERM_SIZE-1];
 
-#if N <= LittleNumber
+#if PERM_SIZE <= LittleNumber
       // Print D array
       printf("\n");
-      for (int jj = 0; jj < N; jj++) {
+      for (int jj = 0; jj < PERM_SIZE; jj++) {
         printf("%d,", D[jj]);
       }
 #endif
-      D[ii] = D[N-1];
+      D[ii] = D[PERM_SIZE-1];
     }
 
-    D[C[N - 2]] = D[N - 2];
+    D[C[PERM_SIZE - 2]] = D[PERM_SIZE - 2];
 
-    C[N - 2]++;
-    for (i = N - 2; (i > 0) && (C[i] > i); i--) {
+    C[PERM_SIZE - 2]++;
+    for (i = PERM_SIZE - 2; (i > 0) && (C[i] > i); i--) {
       COUNT_PROCESS();
       C[i] = 0;
       C[i - 1]++;
@@ -92,25 +94,25 @@ int main() {
   QueryPerformanceCounter(&finish);
   // Calculate duration (seconds) = (end count - start count) / frequency
   duration = (double)(finish.QuadPart - start.QuadPart) / frequency.QuadPart;
-  printf("\npermpro_full\t%u\t%lf", N, duration);
+  printf("\npermpro_full\t%u\t%lf", PERM_SIZE, duration);
 
   // Prevent the compiler from optimizing too much
-  printf("\nD[N-1] = %d, checksum = %llu", D[N-1], checksum);
+  printf("\nD[PERM_SIZE-1] = %d, checksum = %llu", D[PERM_SIZE-1], checksum);
 
 #ifdef DEBUG
   unsigned long long perm = 1;
-  unsigned long long PermValue[N] = {0};
-  unsigned long long SumPermValue[N] = {0};
+  unsigned long long PermValue[PERM_SIZE] = {0};
+  unsigned long long SumPermValue[PERM_SIZE] = {0};
   PermValue[0] = 1;
   SumPermValue[0] = 0;
-  for (i = 1; i <= N; i++) {
+  for (i = 1; i <= PERM_SIZE; i++) {
     perm = perm * i;                              // Calculate factorial: perm = i!
     PermValue[i] = perm;                          // Store current factorial value
     SumPermValue[i] = SumPermValue[i - 1] + perm; // Calculate cumulative factorial sum
   }
 
   // Print i, permvalue, SumPermvalue
-  for (i = 1; i <= N; i++) {
+  for (i = 1; i <= PERM_SIZE; i++) {
     printf("\n%u !, %llu, sigma %llu", i, PermValue[i], SumPermValue[i]);
   }
 
