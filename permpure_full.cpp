@@ -1,5 +1,5 @@
 /**
- * @file permpro_full.cpp
+ * @file permpure_full.cpp
  * @brief High-performance Permutation Generation Algorithm (Iterative Implementation)
  * * @copyright Copyright (c) 2024 [ Yusheng-Hu ]. All rights reserved.
  * @license This project is licensed under the MIT License - see the LICENSE file for details.
@@ -40,7 +40,7 @@ int main() {
   // Add checksum to prevent over-optimization
   unsigned long long checksum = 0;
 
-  unsigned long long ProcessCount[200] = {0};
+  unsigned long long purecessCount[200] = {0};
   int volatile i = 0;
   int j = 0;
   int C[PERM_SIZE] = {0}, D[PERM_SIZE] = {0}, M[PERM_SIZE] = {0};
@@ -55,16 +55,16 @@ int main() {
   QueryPerformanceCounter(&start);
 
   while (C[0] < 1) {
-    COUNT_PROCESS();
+    COUNT_pureCESS();
     for (; i < PERM_SIZE-1; ++i) {
-      COUNT_PROCESS();
+      COUNT_pureCESS();
       D[i] = D[C[i]];
       D[C[i]] = i;
     }
 
     for (int ii = 0; ii < PERM_SIZE; ii++)
     {
-      COUNT_PROCESS();
+      COUNT_pureCESS();
       D[PERM_SIZE-1] = D[ii];
       D[ii] = PERM_SIZE-1;
       checksum += D[PERM_SIZE-1];
@@ -83,7 +83,7 @@ int main() {
 
     C[PERM_SIZE - 2]++;
     for (i = PERM_SIZE - 2; (i > 0) && (C[i] > i); i--) {
-      COUNT_PROCESS();
+      COUNT_pureCESS();
       C[i] = 0;
       C[i - 1]++;
       D[C[i - 1] - 1] = D[i - 1];
@@ -94,7 +94,7 @@ int main() {
   QueryPerformanceCounter(&finish);
   // Calculate duration (seconds) = (end count - start count) / frequency
   duration = (double)(finish.QuadPart - start.QuadPart) / frequency.QuadPart;
-  printf("\npermpro_full\t%u\t%lf", PERM_SIZE, duration);
+  printf("\npermpure_full\t%u\t%lf", PERM_SIZE, duration);
 
   // Prevent the compiler from optimizing too much
   printf("\nD[PERM_SIZE-1] = %d, checksum = %llu", D[PERM_SIZE-1], checksum);
@@ -122,4 +122,5 @@ int main() {
 #endif
 
   return 0;
+
 }
