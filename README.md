@@ -1,5 +1,18 @@
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.18170157.svg)](https://doi.org/10.5281/zenodo.18170157)
 
+---
+
+## 📢 Important Update: From "Position Pro" to "Position Pure"
+
+**Please note:** Starting from version **v1.1.1**, this algorithm has been officially renamed from **Position Pro** to **Position Pure (PP)**.
+
+### Why the name change?
+1. **Trademark Consideration:** We found that "Position Pro" is a registered trademark in several industrial and commercial sectors. To ensure the algorithm's academic independence and avoid legal confusion, we have transitioned to a unique name.
+2. **Technical Essence (Why "Pure"?):** The name **"Pure"** more accurately describes the algorithm's technical implementation. In computer science, "pure" often implies a clean, branchless execution flow. 
+3. **Core Feature - Branchless Logic:** Unlike the base version, **Position Pure (PP)** achieves its linear-time performance through direct element-wise shifting and replacement. **It eliminates conditional branching (no `if` statements in the core loop)**, leading to a "purer" and faster execution path on modern CPUs.
+
+---
+
 # Position Pure Algorithm
 
 Official implementation and interactive visualizations of the **Position Pure (PP)** linear-time unranking algorithm.
