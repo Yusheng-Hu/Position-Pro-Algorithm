@@ -116,7 +116,7 @@ If you use this algorithm or implementation in your research, please cite it as 
   doi          = {10.5281/zenodo.18170157},
   url          = {[https://doi.org/10.5281/zenodo.18170157](https://doi.org/10.5281/zenodo.18170157)}
 }
-
+```
 ## 💡 Future Ideas & Extensions
 
 ### 1. Zero-Memory "Lazy" Permutation
