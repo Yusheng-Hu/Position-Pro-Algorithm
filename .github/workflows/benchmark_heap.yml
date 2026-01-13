@@ -1,0 +1,38 @@
+name: Heap Permutation Benchmark
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch: # Allows manual triggering from the GitHub Actions UI
+
+jobs:
+  run-heap-perm:
+    name: Build and Benchmark Heap's Algorithm
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Hardware Diagnostics (CPU Info)
+      # This step captures the specific cloud hardware for academic benchmarking
+      run: |
+        echo "========== Hardware Environment =========="
+        lscpu | grep "Model name"
+        lscpu | grep "CPU MHz"
+        lscpu | grep "L3 cache"
+        echo "=========================================="
+
+    - name: Compile heap_perm.cpp
+      # Using -O3 optimization for peak algorithmic performance
+      run: g++ -O3 heap_perm.cpp -o heap_perm_test
+
+    - name: Execution and Performance Profiling
+      # 'time' command outputs real, user, and sys time to the console
+      # Redirecting stdout to /dev/null to focus purely on algorithmic latency
+      run: |
+        echo "Starting performance profiling..."
+        time ./heap_perm_test > /dev/null
+        echo "Profiling completed."
