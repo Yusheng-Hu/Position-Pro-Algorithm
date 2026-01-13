@@ -16,12 +16,15 @@ jobs:
     - name: Checkout Repository
       uses: actions/checkout@v4
 
-    - name: Hardware Diagnostics (CPU Info)
-      # This step captures the specific cloud hardware for academic benchmarking
+  - name: Hardware Diagnostics (CPU Info)
+      # Adding '|| true' ensures the workflow continues even if a specific grep fails
       run: |
         echo "========== Hardware Environment =========="
-        lscpu | grep "Model name"
-        lscpu | grep "CPU MHz"
+        lscpu | grep "Model name" || true
+        lscpu | grep "CPU MHz" || true
+        lscpu | grep "L3 cache" || true
+        echo "Full CPU Details:"
+        lscpu
         echo "=========================================="
 
     - name: Compile heap_perm.cpp
