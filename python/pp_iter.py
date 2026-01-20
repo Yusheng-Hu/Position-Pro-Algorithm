@@ -73,6 +73,10 @@ def run_performance_benchmarks(start_n=10, end_n=12):
     Runs performance benchmarks comparing PP Algorithm with itertools.permutations.
     Outputs results in Markdown table format for GitHub Action summaries.
     """
+    # Warm-up phase: run N=9 to let PyPy JIT compile the hot loops
+    for _ in pp_permutations(9): pass
+    for _ in itertools.permutations(range(9)): pass
+        
     print(f"| N | Total Permutations | Itertools (s) | Position Pro (s) | Speed-up |")
     print(f"| :--- | :--- | :--- | :--- | :--- |")
     
