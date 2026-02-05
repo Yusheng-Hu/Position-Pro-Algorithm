@@ -3,12 +3,12 @@ name: Algorithm Performance Comparison
 on:
   push:
     branches: [ main ]
-  workflow_dispatch: # Allows manual trigger
+  workflow_dispatch: # Allows manual trigger from the Actions tab
 
 jobs:
   benchmark:
     runs-on: ubuntu-latest
-    # Define optimization flags as environment variables
+    # Optimization flags defined as environment variables for consistency
     env:
       CXX_FLAGS: "-O3 -ffast-math -march=native"
 
@@ -16,34 +16,40 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Compile programs
+    - name: Compile Programs
       run: |
+        # Navigating to the specific directory for compilation
         cd FullPermutation
         g++ $CXX_FLAGS heap_perm.cpp -o heap_perm
         g++ $CXX_FLAGS permpure_full.cpp -o permpure_full
 
-    - name: Run Benchmarks and Collect Data
+    - name: Run Benchmarks and Generate Table
       run: |
         cd FullPermutation
-        # Create the table header for GitHub Summary
-        echo "| N | Heap Algorithm (s) | PP Algorithm (s) |" >> $GITHUB_STEP_SUMMARY
-        echo "|---|---|---|" >> $GITHUB_STEP_SUMMARY
         
-        # Test for n = 10, 11, 12, 13
+        # Initialize GitHub Step Summary with Markdown table header
+        echo "### Permutation Algorithm Performance (N=10 to 13)" >> $GITHUB_STEP_SUMMARY
+        echo "| N | Heap Algorithm (s) | PP Algorithm (s) | Speedup (Heap/PP) |" >> $GITHUB_STEP_SUMMARY
+        echo "|---|---|---|---|" >> $GITHUB_STEP_SUMMARY
+        
+        # Iterating through the N values
         for n in 10 11 12 13
         do
-          echo "Running benchmark for N=$n..."
+          echo "Processing N=$n..."
           
-          # Execute Heap's algorithm and extract execution time
+          # Execute Heap Algorithm and extract time
           HEAP_TIME=$(./heap_perm $n | grep "EXECUTION_TIME:" | awk '{print $2}')
           
-          # Execute PP algorithm and extract execution time
-          PP_TIME=$(./permpure_full $n | grep "EXECUTION_TIME:" | awk '{print $2}')
+          # Execute PP Algorithm and extract time
+          PP_TIME=$(./permpure_full $n | awk -F': ' '/EXECUTION_TIME/ {print $2}')
           
-          # Append results to the summary table
-          echo "| $n | $HEAP_TIME | $PP_TIME |" >> $GITHUB_STEP_SUMMARY
+          # Calculate simple speedup ratio (optional but helpful)
+          # Note: Using 'bc' for floating point division in shell
+          SPEEDUP=$(echo "scale=2; $HEAP_TIME / $PP_TIME" | bc)
+          
+          # Write the result row to the summary table
+          echo "| $n | $HEAP_TIME | $PP_TIME | ${SPEEDUP}x |" >> $GITHUB_STEP_SUMMARY
         done
 
-    - name: Finalize Report
-      run: |
-        echo "Benchmark completed. Please check the Job Summary for the performance table."
+    - name: Finalize
+      run: echo "Benchmark successfully completed. Check the Summary tab for the results."
