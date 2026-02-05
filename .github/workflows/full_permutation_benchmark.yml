@@ -5,7 +5,6 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
-# Ensure the action has permission to update the README file
 permissions:
   contents: write
 
@@ -13,7 +12,7 @@ jobs:
   benchmark:
     runs-on: ubuntu-latest
     env:
-      # High-performance optimization flags requested by the user
+      # High-performance optimization flags
       CXX_FLAGS: "-O3 -ffast-math -march=native"
 
     steps:
@@ -22,7 +21,7 @@ jobs:
 
     - name: Compile programs
       run: |
-        # Navigate to the subdirectory where source files are located
+        # Navigating to the FullPermutation directory
         cd FullPermutation
         g++ $CXX_FLAGS heap_perm.cpp -o heap_perm
         g++ $CXX_FLAGS permpure_full.cpp -o permpure_full
@@ -30,52 +29,58 @@ jobs:
     - name: Run Benchmarks
       run: |
         cd FullPermutation
-        # Generate a temporary markdown table file
+        # Create a temporary markdown table with UTC timestamp
         echo "#### Last Automated Run: $(date -u) (UTC)" > results.md
         echo "| N | Heap Algorithm (s) | PP Algorithm (s) | Speedup (Heap/PP) |" >> results.md
         echo "|---|---|---|---|" >> results.md
         
-        # Test for N = 10, 11, 12, 13
-        for n in 10 11 12 13
+        # Testing for N = 9, 10 as requested
+        for n in 9 10
         do
           echo "Processing N=$n..."
-          # Execute programs and extract the execution time from output
+          # Execute and extract execution time from stdout
           H_TIME=$(./heap_perm $n | grep "EXECUTION_TIME:" | awk '{print $2}')
           P_TIME=$(./permpure_full $n | grep "EXECUTION_TIME:" | awk '{print $2}')
           
-          # Calculate the speedup ratio using 'bc'
+          # Calculate speedup using 'bc'
           SPEEDUP=$(echo "scale=2; $H_TIME / $P_TIME" | bc)
           
           echo "| $n | $H_TIME | $P_TIME | ${SPEEDUP}x |" >> results.md
         done
         
-        # Output the results to GitHub Action Summary for quick view
+        # Sync results to GitHub Action Summary
         cat results.md >> $GITHUB_STEP_SUMMARY
 
     - name: Update README.md
       run: |
-        # Use a robust file-splitting method to avoid sed regex errors
-        # 1. Capture the content from the beginning to the start marker
-        sed -n '1,//p' README.md > header.tmp
+        # Use line numbers to split the file, which is more reliable than range matching
+        START_LINE=$(grep -n "" README.md | cut -d: -f1)
+        END_LINE=$(grep -n "" README.md | cut -d: -f1)
+
+        if [ -z "$START_LINE" ] || [ -z "$END_LINE" ]; then
+          echo "Error: Benchmark markers not found in README.md"
+          exit 1
+        fi
+
+        # 1. Get header (up to the start marker)
+        head -n "$START_LINE" README.md > header.tmp
         
-        # 2. Capture the content from the end marker to the end of file
-        sed -n '//,$p' README.md > footer.tmp
+        # 2. Get footer (from the end marker to the end of file)
+        tail -n +"$END_LINE" README.md > footer.tmp
         
-        # 3. Reconstruct README.md by merging: Header + Benchmark Table + Footer
+        # 3. Concatenate all parts
         cat header.tmp > README.md
         cat FullPermutation/results.md >> README.md
         cat footer.tmp >> README.md
         
-        # Clean up temporary files
         rm header.tmp footer.tmp
 
     - name: Commit and Push changes
       run: |
-        # Configure the bot identity
         git config --global user.name "github-actions[bot]"
         git config --global user.email "github-actions[bot]@users.noreply.github.com"
         git add README.md
         
-        # Commit and push only if changes exist to avoid infinite loops
-        # Use [skip ci] to prevent this commit from re-triggering the workflow
+        # Commit only if changes exist to prevent infinite loops
+        # [skip ci] is used to prevent re-triggering the same workflow
         git diff --quiet && git diff --staged --quiet || (git commit -m "docs: automated benchmark update [skip ci]" && git push)
