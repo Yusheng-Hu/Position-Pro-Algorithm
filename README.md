@@ -35,7 +35,7 @@ While the MR algorithm uses a specific swap-based approach, the PP method introd
 
 
 ## 🚀 Industrial Benchmark: Position Pure (PP) vs. Myrvold-Ruskey (MR) 
-[//]: # (UNIQUE_PP_ALGO_BENCHMARK_DATA_SECTION_START_DO_NOT_REMOVE)
+[//]: # (INDUSTRIAL_PERFORMANCE_BENCHMARK_DATA_SECTION_START_DO_NOT_REMOVE)
 
 #### Last Automated Run: Thu Feb 5 2026 (Environment: AMD EPYC 7763 64-Core Processor)
 
@@ -59,7 +59,7 @@ While the MR algorithm uses a specific swap-based approach, the PP method introd
 | 100,000 | Random | 111,289.0 | 89,936.7 | **1.24x** |
 | 1,000,000 | Random | 1,526,315.5 | 1,213,411.3 | **1.26x** |
 
-[//]: # (UNIQUE_PP_ALGO_BENCHMARK_DATA_SECTION_END_DO_NOT_REMOVE)
+[//]: # (INDUSTRIAL_PERFORMANCE_BENCHMARK_DATA_SECTION_END_DO_NOT_REMOVE)
 
 
 
