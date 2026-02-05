@@ -34,7 +34,7 @@ The **Position Pure (PP)** algorithm is built upon the foundational work of **We
 While the MR algorithm uses a specific swap-based approach, the PP method introduces a more intuitive indexing logic $D[i]$ that simplifies the implementation and enhances understanding of the mapping process.
 
 
-## 🚀 Industrial Benchmark: Position Pure (PP) vs. Myrvold-Ruskey (MR) 
+## 🚀 Liner rank unrank: Position Pure (PP) vs. Myrvold-Ruskey (MR) 
 [//]: # (INDUSTRIAL_PERFORMANCE_BENCHMARK_DATA_SECTION_START_DO_NOT_REMOVE)
 
 #### Last Automated Run: Thu Feb  5 09:53:50 UTC 2026 (Environment: AMD EPYC 7763 64-Core Processor)
@@ -70,7 +70,7 @@ While the MR algorithm uses a specific swap-based approach, the PP method introd
 
 
 
-## PositionPure: Iterative Permutation Generation
+## 🚀 Full Permutation generation: Iterative Permutation Generation
 
 The **PositionPure** algorithm is a high-performance, iterative approach to generating all permutations of a set. By utilizing an iterative state machine rather than traditional recursion, it significantly reduces function call overhead and optimizes CPU branch prediction efficiency.
 
@@ -85,11 +85,9 @@ The **PositionPure** algorithm is a high-performance, iterative approach to gene
 The following commands compile both algorithms using the same aggressive optimization flags to ensure a fair performance comparison:
 
 ```bash
-# Compile Heap's Permutation
-g++ -O3 -std=c++11 -march=native -flto -ffast-math -fomit-frame-pointer heap_perm.cpp -o heap_test -pthread
+# Compile options
+g++ -O3 -std=c++11 -march=native -flto -ffast-math -fomit-frame-pointer
 
-# Compile Position-Pure
-g++ -O3 -std=c++11 -march=native -flto -ffast-math -fomit-frame-pointer permpure_full.cpp -o pure_test -pthread
 ```
 
 [//]: # (UNIQUE_PP_ALGO_BENCHMARK_DATA_SECTION_START_DO_NOT_REMOVE)
@@ -109,6 +107,14 @@ g++ -O3 -std=c++11 -march=native -flto -ffast-math -fomit-frame-pointer permpure
 
 ---
 
+#### **Key Insights**
+* **Significant Speedup:** `permPure_full` consistently outperforms Heap's Algorithm by a factor of approximately **7x**.
+* **High Throughput:** For $n=13$, `permPure_full` processes over **6.2 billion permutations** in under 11 seconds, showcasing exceptional instruction-level efficiency.
+* **Algorithmic Efficiency:** The performance gap highlights the superior memory access patterns and lower computational overhead inherent in the PositionPure algorithm.
+* **Scalability:** As the permutation space grows factorially, the performance gap remains stable, demonstrating excellent algorithmic efficiency for large-scale generation.
+
+---
+
 ### Comparison with Python's Built-in itertools
 
 At the request of Reddit users and other community members, a performance comparison with Python’s built-in `itertools` was conducted. Results are based on the implementation in `Position-Pure-Algorithm/python/pp_iter.py`.
@@ -118,21 +124,6 @@ At the request of Reddit users and other community members, a performance compar
 * **Future Plans**: For applications requiring even higher performance, a **C-compiled version** should be considered.
 
 ---
-
-#### **Key Insights**
-* **Significant Speedup:** `permPure_full` consistently outperforms Heap's Algorithm by a factor of approximately **6x**.
-* **High Throughput:** For $n=13$, `permPure_full` processes over **6.2 billion permutations** in under 4 seconds, showcasing exceptional instruction-level efficiency.
-* **Algorithmic Efficiency:** The performance gap highlights the superior memory access patterns and lower computational overhead inherent in the PositionPure algorithm.
-
----
-
-#### **Performance Insight**
-* **Consistent Efficiency:** `permPure_full` consistently outperforms Heap's Algorithm by a factor of **~6x**.
-* **Scalability:** As the permutation space grows factorially, the performance gap remains stable, demonstrating excellent algorithmic efficiency for large-scale generation.
-* **Optimized Throughput:** The data indicates that `permPure_full` handles over **2 billion permutations per second** on the tested hardware, significantly reducing the computational overhead for exhaustive search tasks.
-
-### Analysis
-The results demonstrate exceptional instruction-level parallelism. On the i7-8550U platform, **PositionPure** consistently achieves a throughput of approximately **1.8 billion permutations per second**, showcasing near-linear scaling relative to the mathematical complexity $O(N!)$.
 
 ## 📖 Citation
 
