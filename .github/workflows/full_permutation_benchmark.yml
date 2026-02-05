@@ -12,7 +12,7 @@ jobs:
   benchmark:
     runs-on: ubuntu-latest
     env:
-      # Comprehensive aggressive optimization flags
+      # Aggressive optimization flags
       CXX_FLAGS: "-O3 -std=c++11 -march=native -flto -ffast-math -fomit-frame-pointer"
 
     steps:
@@ -30,6 +30,7 @@ jobs:
         cd FullPermutation
         # Generate temporary results (N=9, 10)
         echo "#### Last Automated Run: $(date -u) (UTC)" > results.md
+        echo "" >> results.md
         echo "| N | Heap Algorithm (s) | PP Algorithm (s) | Speedup (Heap/PP) |" >> results.md
         echo "|---|---|---|---|" >> results.md
         
@@ -48,37 +49,38 @@ jobs:
         import os
         import sys
 
-        # Unique markers (Standard Markdown hidden comments)
+        # Unique markers
         start_marker = "[//]: # (UNIQUE_PP_ALGO_BENCHMARK_DATA_SECTION_START_DO_NOT_REMOVE)"
         end_marker = "[//]: # (UNIQUE_PP_ALGO_BENCHMARK_DATA_SECTION_END_DO_NOT_REMOVE)"
 
-        # Load results
-        with open("FullPermutation/results.md", "r") as f:
+        # 1. Read new table content
+        with open("FullPermutation/results.md", "r", encoding="utf-8") as f:
             new_table = f.read().strip()
 
-        # Load README
+        # 2. Read existing README
         with open("README.md", "r", encoding="utf-8") as f:
             content = f.read()
 
+        # 3. Precise replacement with guaranteed line breaks
         if start_marker in content and end_marker in content:
-            prefix = content.split(start_marker)[0]
-            suffix = content.split(end_marker)[-1]
+            # Use split and take only what's needed to avoid duplicated parts
+            prefix = content.split(start_marker)[0].rstrip()
+            suffix = content.split(end_marker)[-1].lstrip()
             
-            # Reconstruct with MANDATORY double newlines for proper Markdown rendering
-            # We ensure the markers and the table are separated by empty lines
-            updated_content = (
-                f"{prefix.strip()}\n\n"
-                f"{start_marker}\n\n"
-                f"{new_table}\n\n"
-                f"{end_marker}\n\n"
-                f"{suffix.strip()}"
-            )
+            # Reconstruct with 2 newlines between each segment for Markdown safety
+            new_readme = "\n\n".join([
+                prefix,
+                start_marker,
+                new_table,
+                end_marker,
+                suffix
+            ])
             
             with open("README.md", "w", encoding="utf-8") as f:
-                f.write(updated_content)
-            print("README.md repaired and updated.")
+                f.write(new_readme)
+            print("README.md updated and formatting fixed.")
         else:
-            print("Error: Markers not found.")
+            print("Error: Unique markers not found.")
             sys.exit(1)
 
     - name: Commit and Push
@@ -86,4 +88,4 @@ jobs:
         git config --global user.name "github-actions[bot]"
         git config --global user.email "github-actions[bot]@users.noreply.github.com"
         git add README.md
-        git diff --quiet && git diff --staged --quiet || (git commit -m "docs: fix rendering and update benchmarks [skip ci]" && git push)
+        git diff --quiet && git diff --staged --quiet || (git commit -m "docs: fix formatting and update benchmarks [skip ci]" && git push)
