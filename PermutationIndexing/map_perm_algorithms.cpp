@@ -64,7 +64,7 @@ void MyrvoldRuskey_rank(const vector<int> &D, vector<int> &C) {
 // Converts factorial index array C to permutation D
 void Position_unrank(const vector<int> &C, vector<int> &D) {
   int n = C.size();
-  static vector<int> M; // Static vector to avoid reallocation on each call
+  vector<int> M; // Static vector to avoid reallocation on each call
   if (M.size() != n) {
     M.resize(n); // Only resize if needed
   }
@@ -111,12 +111,40 @@ void PositionPure_unrank(const vector<int> &C, vector<int> &D) {
 
 // PositionPure rank algorithm
 void PositionPure_rank(const vector<int> &D, vector<int> &C) {
-  int n = D.size();
-  C.resize(n); // Ensure C has the correct size
+  const int n = D.size();
+  static vector<int> M;
+  if (M.size() < (size_t)n) M.resize(n);
 
-  // Create a copy of D for manipulation
+  // 1. 唯一的一次全量拷贝与映射建立
+  for (int i = 0; i < n; ++i) {
+      const int val = D[i];
+      C[i] = val;
+      M[val] = i;
+  }
+
+  // 2. 纯粹的单步循环还原
+  for (int i = n - 1; i >= 0; --i) {
+      // 利用寄存器锁定变量，减少内存 load 次数
+      const int target_pos = M[i];
+      const int val_at_i = C[i];
+
+      // 核心交换与映射维护
+      C[target_pos] = val_at_i;
+      M[val_at_i] = target_pos;
+      
+      // 产出结果
+      C[i] = target_pos;
+  }
+}
+
+// Original PositionPure rank algorithm (for comparison)
+/*
+void PositionPure_rank(const vector<int> &D, vector<int> &C) {
+  int n = D.size();
+  C.resize(n);
+
   vector<int> D_local = D;
-  vector<int> M(n, 0); // Initialize position map
+  vector<int> M(n, 0);
 
   for (int i = 0; i < n; ++i) {
     M[D_local[i]] = i;
@@ -128,4 +156,5 @@ void PositionPure_rank(const vector<int> &D, vector<int> &C) {
     M[D_local[i]] = M[i];
   }
 }
+*/
 
