@@ -83,16 +83,9 @@ g++ -O3 -std=c++11 -march=native -flto -ffast-math -fomit-frame-pointer permpure
 
 ### Performance Benchmarks: Full Permutation Generation
 
-The table below demonstrates the performance of **PositionPure (permPure_full)** compared to the classic **Heap's Algorithm (heap_perm)** across sizes $n=11, 12, 13$.
-
-| Size ($n$) | Algorithm | Test 1 (s) | Test 2 (s) | Test 3 (s) | **Average (s)** | **Speedup** |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **11** | **permPure_full** | 0.025236 | 0.026826 | 0.023158 | **0.025073** | **5.27x** |
-| | heap_perm | 0.140333 | 0.127427 | 0.128642 | 0.132134 | 1.00x |
-| **12** | **permPure_full** | 0.272237 | 0.270233 | 0.291104 | **0.277858** | **6.18x** |
-| | heap_perm | 1.607632 | 1.645012 | 1.899579 | 1.717408 | 1.00x |
-| **13** | **permPure_full** | 4.043442 | 3.877965 | 3.960660 | **3.960689** | **5.94x** |
-| | heap_perm | 23.504669 | 23.567322 | 23.554655 | 23.542215 | 1.00x |
+### 📊 Live GitHub Actions Benchmarks
+*Results will be automatically updated here by GitHub Actions.*
+### Performance Benchmarks: Full Permutation Generation
 
 ---
 
