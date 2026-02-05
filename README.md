@@ -122,6 +122,9 @@ At the request of Reddit users and other community members, a performance compar
 * **Runtime Environment**: The tests were performed using **PyPy3**. Since the standard `itertools` library is C-optimized, using PyPy3 helps bridge the low-level language gap, allowing for a more authentic comparison of algorithmic efficiency.
 * **Results**: Benchmark tests show that this algorithm improves performance by at least **1.4x**, with potential gains reaching over **2x** compared to the standard library.
 * **Future Plans**: For applications requiring even higher performance, a **C-compiled version** should be considered.
+[//]: # (PYTHON_PP_ITER_BENCHMARK_START)
+
+[//]: # (PYTHON_PP_ITER_BENCHMARK_END)
 
 ---
 
