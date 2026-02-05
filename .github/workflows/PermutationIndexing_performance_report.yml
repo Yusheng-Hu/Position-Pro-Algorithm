@@ -3,60 +3,53 @@ name: Position Pure Performance Report
 on:
   push:
     branches: [ main ]
-  pull_request:
-    branches: [ main ]
   workflow_dispatch:
 
 jobs:
-  benchmark:
-    name: Run PP vs MR Benchmark
+  benchmark_and_update:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Build and Run Benchmarks
-        # 我们在一个 Step 里完成编译和运行，确保文件流不中断
+      - name: Run Benchmarks and Format Data
+        working-directory: ./PermutationIndexing
         run: |
-          cd PermutationIndexing
-          
-          # 1. Rank Benchmark
+          # 1. Ranking Benchmark
           g++ -O3 -march=native map_perm_algorithms.cpp map_algorithm_test.cpp -o benchmark_rank
-          echo "## Position Pure (PP) Rank Performance Report" > rank_report.md
-          echo "Runner CPU: $(lscpu | grep 'Model name' | cut -f 2 -d ":" || echo "Unknown")" >> rank_report.md
-          echo -e "\n\`\`\`text" >> rank_report.md
-          ./benchmark_rank >> rank_report.md
-          echo -e "\`\`\`\n" >> rank_report.md
+          echo "#### Last Automated Run: $(date) (Environment: AMD EPYC 7763 64-Core Processor)" > table.tmp
+          echo -e "\n**Ranking Performance (Permutation D → Factorial C)**" >> table.tmp
+          echo "| N | Distribution | MR (ns/it) | PP (ns/it) | Speedup (MR/PP) |" >> table.tmp
+          echo "|---|---|---|---|---|" >> table.tmp
+          ./benchmark_rank | grep -E "^[0-9]" | awk '{printf "| %s | %s | %s | %s | **%s** |\n", $1, $2, $3, $4, $5}' >> table.tmp
           
-          # 2. Unrank Benchmark (using sed to switch)
+          # 2. Unranking Benchmark
           sed -i 's/measure_speed(MR_rank/measure_speed(MR_unrank/g' map_algorithm_test.cpp
           sed -i 's/measure_speed(PositionPure_rank/measure_speed(PositionPure_unrank/g' map_algorithm_test.cpp
           g++ -O3 -march=native map_perm_algorithms.cpp map_algorithm_test.cpp -o benchmark_unrank
-          echo "## Position Pure (PP) Unrank Performance Report" > unrank_report.md
-          echo -e "\n\`\`\`text" >> unrank_report.md
-          ./benchmark_unrank >> unrank_report.md
-          echo -e "\`\`\`\n" >> unrank_report.md
-          
-          # 3. Use absolute path to move reports to root for safety
-          cp rank_report.md $GITHUB_WORKSPACE/final_rank.md
-          cp unrank_report.md $GITHUB_WORKSPACE/final_unrank.md
+          echo -e "\n**Unranking Performance (Factorial C → Permutation D)**" >> table.tmp
+          echo "| N | Distribution | MR (ns/it) | PP (ns/it) | Speedup (MR/PP) |" >> table.tmp
+          echo "|---|---|---|---|---|" >> table.tmp
+          ./benchmark_unrank | grep -E "^[0-9]" | awk '{printf "| %s | %s | %s | %s | **%s** |\n", $1, $2, $3, $4, $5}' >> table.tmp
 
-      - name: Publish to Summary
+      - name: Inject Data into README.md
         run: |
-          # 此时文件一定在根目录
-          if [ -f final_rank.md ]; then
-            cat final_rank.md >> $GITHUB_STEP_SUMMARY
-          fi
-          echo -e "\n---\n" >> $GITHUB_STEP_SUMMARY
-          if [ -f final_unrank.md ]; then
-            cat final_unrank.md >> $GITHUB_STEP_SUMMARY
-          fi
+          START_MARK="INDUSTRIAL_PERFORMANCE_BENCHMARK_DATA_SECTION_START_DO_NOT_REMOVE"
+          END_MARK="INDUSTRIAL_PERFORMANCE_BENCHMARK_DATA_SECTION_END_DO_NOT_REMOVE"
+          
+          # Extract the new table content
+          NEW_TABLE=$(cat PermutationIndexing/table.tmp)
+          
+          # Use Perl for a robust multi-line regex replacement
+          perl -i -0777 -pe "s/\[\/\/\]: # \($START_MARK\).*?\[\/\/\]: # \($END_MARK\)/\[\/\/\]: # ($START_MARK)\n\n$NEW_TABLE\n\n\[\/\/\]: # ($END_MARK)/s" README.md
 
-      - name: Archive Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: performance-reports
-          path: |
-            final_rank.md
-            final_unrank.md
+      - name: Commit and Push Changes
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add README.md
+          # Only commit if there are actual changes
+          git diff --quiet && git diff --staged --quiet || (git commit -m "docs: auto-update industrial benchmarks [skip ci]" && git push)
