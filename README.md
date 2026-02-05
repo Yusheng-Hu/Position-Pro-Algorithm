@@ -126,12 +126,12 @@ At the request of Reddit users and other community members, a performance compar
 [//]: # (PYTHON_PP_ITER_BENCHMARK_START)
 
 ### 🐍 Position Pro Iterator Performance (PyPy)
-| N | Total Permutations | Itertools (s) | Position Pro (s) | Speed-up |
+| N | Total Permutations | Itertools (s) | Position Pure (s) | Speed-up |
 | :--- | :--- | :--- | :--- | :--- |
-| 10 | 3,628,800 | 0.1092s | 0.0675s | **1.62x** |
-| 11 | 39,916,800 | 1.2280s | 0.5596s | **2.19x** |
-| 12 | 479,001,600 | 15.4416s | 6.5658s | **2.35x** |
-| 13 | 6,227,020,800 | 202.8022s | 85.0001s | **2.39x** |
+| 10 | 3,628,800 | 0.1069s | 0.0671s | **1.59x** |
+| 11 | 39,916,800 | 1.2130s | 0.5624s | **2.16x** |
+| 12 | 479,001,600 | 14.9361s | 6.5563s | **2.28x** |
+| 13 | 6,227,020,800 | 200.3305s | 84.4166s | **2.37x** |
 
 [//]: # (PYTHON_PP_ITER_BENCHMARK_END)
 
