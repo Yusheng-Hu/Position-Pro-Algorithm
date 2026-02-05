@@ -98,4 +98,4 @@ def run_performance_benchmarks(start_n=10, end_n=12):
         print(f"| {n} | {total:,} | {t_std:.4f}s | {t_pp:.4f}s | **{speed_up:.2f}x** |")
 
 if __name__ == "__main__":
-    run_performance_benchmarks(10, 12)
+    run_performance_benchmarks(10, 13)
