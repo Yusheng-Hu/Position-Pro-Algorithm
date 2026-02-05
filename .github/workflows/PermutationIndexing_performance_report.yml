@@ -16,9 +16,9 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Run Benchmarks and Format Data
+        id: run_benchmarks
         working-directory: ./PermutationIndexing
         run: |
-          # 1. Ranking Benchmark
           g++ -O3 -march=native map_perm_algorithms.cpp map_algorithm_test.cpp -o benchmark_rank
           echo "#### Last Automated Run: $(date) (Environment: AMD EPYC 7763 64-Core Processor)" > table.tmp
           echo -e "\n**Ranking Performance (Permutation D → Factorial C)**" >> table.tmp
@@ -26,7 +26,6 @@ jobs:
           echo "|---|---|---|---|---|" >> table.tmp
           ./benchmark_rank | grep -E "^[0-9]" | awk '{printf "| %s | %s | %s | %s | **%s** |\n", $1, $2, $3, $4, $5}' >> table.tmp
           
-          # 2. Unranking Benchmark
           sed -i 's/measure_speed(MR_rank/measure_speed(MR_unrank/g' map_algorithm_test.cpp
           sed -i 's/measure_speed(PositionPure_rank/measure_speed(PositionPure_unrank/g' map_algorithm_test.cpp
           g++ -O3 -march=native map_perm_algorithms.cpp map_algorithm_test.cpp -o benchmark_unrank
@@ -36,20 +35,21 @@ jobs:
           ./benchmark_unrank | grep -E "^[0-9]" | awk '{printf "| %s | %s | %s | %s | **%s** |\n", $1, $2, $3, $4, $5}' >> table.tmp
 
       - name: Inject Data into README.md
+        env:
+          START_MARK: "INDUSTRIAL_PERFORMANCE_BENCHMARK_DATA_SECTION_START_DO_NOT_REMOVE"
+          END_MARK: "INDUSTRIAL_PERFORMANCE_BENCHMARK_DATA_SECTION_END_DO_NOT_REMOVE"
         run: |
-          START_MARK="INDUSTRIAL_PERFORMANCE_BENCHMARK_DATA_SECTION_START_DO_NOT_REMOVE"
-          END_MARK="INDUSTRIAL_PERFORMANCE_BENCHMARK_DATA_SECTION_END_DO_NOT_REMOVE"
-          
-          # Extract the new table content
-          NEW_TABLE=$(cat PermutationIndexing/table.tmp)
-          
-          # Use Perl for a robust multi-line regex replacement
-          perl -i -0777 -pe "s/\[\/\/\]: # \($START_MARK\).*?\[\/\/\]: # \($END_MARK\)/\[\/\/\]: # ($START_MARK)\n\n$NEW_TABLE\n\n\[\/\/\]: # ($END_MARK)/s" README.md
+          export NEW_TABLE=$(cat PermutationIndexing/table.tmp)
+          perl -i -0777 -pe '
+            $s = quotemeta($ENV{START_MARK});
+            $e = quotemeta($ENV{END_MARK});
+            $replacement = $ENV{NEW_TABLE};
+            s/\[\/\/\]: # \($s\).*?\[\/\/\]: # \($e\)/\[\/\/\]: # ($ENV{START_MARK})\n\n$replacement\n\n\[\/\/\]: # ($ENV{END_MARK})/s;
+          ' README.md
 
       - name: Commit and Push Changes
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add README.md
-          # Only commit if there are actual changes
           git diff --quiet && git diff --staged --quiet || (git commit -m "docs: auto-update industrial benchmarks [skip ci]" && git push)
