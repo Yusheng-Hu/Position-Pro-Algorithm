@@ -12,7 +12,7 @@ jobs:
   benchmark:
     runs-on: ubuntu-latest
     env:
-      # Aggressive optimization flags per your requirement
+      # Comprehensive aggressive optimization flags as defined in the project
       CXX_FLAGS: "-O3 -std=c++11 -march=native -flto -ffast-math -fomit-frame-pointer"
 
     steps:
@@ -21,6 +21,7 @@ jobs:
 
     - name: Compile Programs
       run: |
+        # Ensure the programs are compiled with high-performance flags
         cd FullPermutation
         g++ $CXX_FLAGS heap_perm.cpp -o heap_test -pthread
         g++ $CXX_FLAGS permpure_full.cpp -o pure_test -pthread
@@ -28,14 +29,16 @@ jobs:
     - name: Run Benchmarks
       run: |
         cd FullPermutation
-        # Generate the results table with clean Markdown syntax
+        # Initialize the benchmark results table
         echo "#### Last Automated Run: $(date -u) (UTC)" > results.md
         echo "" >> results.md
         echo "| N | Heap Algorithm (s) | PP Algorithm (s) | Speedup (Heap/PP) |" >> results.md
         echo "|---|---|---|---|" >> results.md
         
-        for n in 9 10
+        # Testing N from 9 to 13 to highlight the efficiency of the PP algorithm
+        for n in 9 10 11 12 13
         do
+          echo "Running benchmark for N=$n..."
           H_TIME=$(./heap_test $n | grep "EXECUTION_TIME:" | awk '{print $2}')
           P_TIME=$(./pure_test $n | grep "EXECUTION_TIME:" | awk '{print $2}')
           SPEEDUP=$(echo "scale=2; $H_TIME / $P_TIME" | bc)
@@ -43,44 +46,49 @@ jobs:
         done
         cat results.md >> $GITHUB_STEP_SUMMARY
 
-    - name: Update README.md via Python (Absolute Formatting Fix)
+    - name: Update README.md via Python
       shell: python
       run: |
-        import re
+        import os
         import sys
 
-        # Defining the unique markers
-        start_m = "[//]: # (UNIQUE_PP_ALGO_BENCHMARK_DATA_SECTION_START_DO_NOT_REMOVE)"
-        end_m = "[//]: # (UNIQUE_PP_ALGO_BENCHMARK_DATA_SECTION_END_DO_NOT_REMOVE)"
+        start_marker = "[//]: # (UNIQUE_PP_ALGO_BENCHMARK_DATA_SECTION_START_DO_NOT_REMOVE)"
+        end_marker = "[//]: # (UNIQUE_PP_ALGO_BENCHMARK_DATA_SECTION_END_DO_NOT_REMOVE)"
 
-        # 1. Read the new table
+        # Load the newly generated table
         with open("FullPermutation/results.md", "r", encoding="utf-8") as f:
-            table_data = f.read().strip()
+            new_table = f.read().strip()
 
-        # 2. Read current README.md
+        # Read the current content of README.md
         with open("README.md", "r", encoding="utf-8") as f:
             content = f.read()
 
-        # 3. Use Regex to find the block between markers and replace it
-        # This pattern finds everything between the markers including the markers themselves
-        pattern = re.compile(re.escape(start_m) + r".*?" + re.escape(end_m), re.DOTALL)
-        
-        # We wrap the new table in markers and add TRIPLE newlines for maximum safety
-        # This ensures it can NEVER stick to the code block above or text below
-        replacement = f"{start_m}\n\n{table_data}\n\n{end_m}"
-
-        if pattern.search(content):
-            new_content = pattern.sub(replacement, content)
+        if start_marker in content and end_marker in content:
+            # Split the content and rebuild with strict block isolation
+            prefix = content.split(start_marker)[0].strip()
+            suffix = content.split(end_marker)[-1].strip()
+            
+            # Reconstruction with mandatory double-newlines to prevent rendering bleed-through
+            updated_readme = (
+                prefix + "\n\n" + 
+                start_marker + "\n\n" + 
+                new_table + "\n\n" + 
+                end_marker + "\n\n" + 
+                suffix
+            )
+            
             with open("README.md", "w", encoding="utf-8") as f:
-                f.write(new_content)
-            print("README.md updated and rendering fixed.")
+                f.write(updated_readme)
+            print("README.md updated successfully with N=13 results.")
         else:
-            print("Error: Markers not found or already corrupted.")
+            print("Error: Could not find markers.")
             sys.exit(1)
 
     - name: Commit and Push
       run: |
+        # Standard GitHub Actions bot configuration
         git config --global user.name "github-actions[bot]"
         git config --global user.email "github-actions[bot]@users.noreply.github.com"
         git add README.md
-        git diff --quiet && git diff --staged --quiet || (git commit -m "docs: permanent fix for benchmark rendering [skip ci]" && git push)
+        # Using [skip ci] to prevent recursive workflow triggers
+        git diff --quiet && git diff --staged --quiet || (git commit -m "docs: performance benchmark update N=13 [skip ci]" && git push)
