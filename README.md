@@ -128,9 +128,10 @@ At the request of Reddit users and other community members, a performance compar
 ### 🐍 Position Pro Iterator Performance (PyPy)
 | N | Total Permutations | Itertools (s) | Position Pro (s) | Speed-up |
 | :--- | :--- | :--- | :--- | :--- |
-| 10 | 3,628,800 | 0.1085s | 0.0703s | **1.54x** |
-| 11 | 39,916,800 | 1.2236s | 0.5704s | **2.15x** |
-| 12 | 479,001,600 | 14.9898s | 6.7809s | **2.21x** |
+| 10 | 3,628,800 | 0.1092s | 0.0675s | **1.62x** |
+| 11 | 39,916,800 | 1.2280s | 0.5596s | **2.19x** |
+| 12 | 479,001,600 | 15.4416s | 6.5658s | **2.35x** |
+| 13 | 6,227,020,800 | 202.8022s | 85.0001s | **2.39x** |
 
 [//]: # (PYTHON_PP_ITER_BENCHMARK_END)
 
