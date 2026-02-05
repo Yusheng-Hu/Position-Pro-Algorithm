@@ -13,6 +13,7 @@ jobs:
   benchmark:
     runs-on: ubuntu-latest
     env:
+      # Aggressive optimization flags for performance benchmarking
       CXX_FLAGS: "-O3 -ffast-math -march=native"
 
     steps:
@@ -21,7 +22,7 @@ jobs:
 
     - name: Compile programs
       run: |
-        # Use the paths from your project structure
+        # Navigate to the source directory
         cd FullPermutation
         g++ $CXX_FLAGS heap_perm.cpp -o heap_perm
         g++ $CXX_FLAGS permpure_full.cpp -o permpure_full
@@ -29,41 +30,50 @@ jobs:
     - name: Run Benchmarks
       run: |
         cd FullPermutation
-        # Create a temporary markdown table
-        echo "#### Last Run: $(date -u)" > results.md
+        # Create a temporary markdown table with a timestamp
+        echo "#### Last Automated Run: $(date -u) (UTC)" > results.md
         echo "| N | Heap Algorithm (s) | PP Algorithm (s) | Speedup (Heap/PP) |" >> results.md
         echo "|---|---|---|---|" >> results.md
         
+        # Benchmarking for N = 10, 11, 12, 13
         for n in 10 11 12 13
         do
+          echo "Benchmarking N=$n..."
           H_TIME=$(./heap_perm $n | grep "EXECUTION_TIME:" | awk '{print $2}')
           P_TIME=$(./permpure_full $n | grep "EXECUTION_TIME:" | awk '{print $2}')
+          
+          # Calculate speedup ratio using 'bc'
           SPEEDUP=$(echo "scale=2; $H_TIME / $P_TIME" | bc)
+          
           echo "| $n | $H_TIME | $P_TIME | ${SPEEDUP}x |" >> results.md
         done
         
-        # Display in GitHub Summary as well
+        # Display the table in the GitHub Actions Job Summary
         cat results.md >> $GITHUB_STEP_SUMMARY
 
     - name: Update README.md
       run: |
-        # Read the generated table
-        TABLE_CONTENT=$(cat FullPermutation/results.md)
+        # Robustly split and merge README.md to avoid sed regex errors
+        # 1. Capture content from start to the first marker
+        sed -n '1,//p' README.md > header.tmp
         
-        # Use sed to delete everything between the markers and insert the new table
-        # We use a temp file to avoid complex escaping issues in sed
-        sed -n '//q;p' README.md > README.tmp
-        echo "" >> README.tmp
-        cat FullPermutation/results.md >> README.tmp
-        echo "" >> README.tmp
-        sed -n '//,$p' README.md | tail -n +2 >> README.tmp
+        # 2. Capture content from the end marker to the end of file
+        sed -n '//,$p' README.md > footer.tmp
         
-        mv README.tmp README.md
+        # 3. Rebuild README.md: Header + New Table + Footer
+        cat header.tmp > README.md
+        cat FullPermutation/results.md >> README.md
+        cat footer.tmp >> README.md
+        
+        # Cleanup temporary files
+        rm header.tmp footer.tmp
 
-    - name: Commit and Push
+    - name: Commit and Push changes
       run: |
         git config --global user.name "github-actions[bot]"
         git config --global user.email "github-actions[bot]@users.noreply.github.com"
         git add README.md
-        # Only push if changes exist to avoid infinite loops
-        git diff --quiet && git diff --staged --quiet || (git commit -m "docs: auto-update benchmark results [skip ci]" && git push)
+        
+        # Only commit and push if the README.md was actually changed
+        # Uses [skip ci] to prevent the action from triggering itself in an infinite loop
+        git diff --quiet && git diff --staged --quiet || (git commit -m "docs: automated benchmark update [skip ci]" && git push)
