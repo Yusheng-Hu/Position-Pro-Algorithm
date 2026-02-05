@@ -73,19 +73,10 @@ g++ -O3 -std=c++11 -march=native -flto -ffast-math -fomit-frame-pointer heap_per
 
 # Compile Position-Pure
 g++ -O3 -std=c++11 -march=native -flto -ffast-math -fomit-frame-pointer permpure_full.cpp -o pure_test -pthread
-```
 
-| $N$ (Size) | Total Permutations ($N!$) | Execution Time (Seconds) | Throughput (Perms/Sec) |
-| :--- | :--- | :--- | :--- |
-| **12** | 479,001,600 | **0.272373** | ~1.75 Billion |
-| **13** | 6,227,020,800 | **3.696829** | **~1.68 Billion** |
-| **14** | 87,178,291,200 | **48.328881** | ~1.80 Billion |
 
-### Performance Benchmarks: Full Permutation Generation
-
-### 📊 Live GitHub Actions Benchmarks
-*Results will be automatically updated here by GitHub Actions.*
-### Performance Benchmarks: Full Permutation Generation
+[//]: # (UNIQUE_PP_ALGO_BENCHMARK_DATA_SECTION_START_DO_NOT_REMOVE)
+[//]: # (UNIQUE_PP_ALGO_BENCHMARK_DATA_SECTION_END_DO_NOT_REMOVE)
 
 ---
 
