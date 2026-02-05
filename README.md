@@ -57,16 +57,16 @@ g++ -O3 -std=c++11 -march=native -flto -ffast-math -fomit-frame-pointer permpure
 
 [//]: # (UNIQUE_PP_ALGO_BENCHMARK_DATA_SECTION_START_DO_NOT_REMOVE)
 
-#### Last Automated Run: Thu Feb  5 05:08:09 UTC 2026 (UTC)
+#### Last Automated Run: Thu Feb  5 07:15:56 UTC 2026 (UTC)
 
 | N | Heap Algorithm (s) | PP Algorithm (s) | Speedup (Heap/PP) |
 |---|---|---|---|
-| 9 | 0.005752 | 0.000759 | 7.57x |
-| 10 | 0.058036 | 0.007319 | 7.92x |
-| 11 | 0.646996 | 0.074261 | 8.71x |
-| 12 | 7.838053 | 0.824882 | 9.50x |
-| 13 | 103.608246 | 10.556514 | 9.81x |
-| 14 | 1447.052983 | 143.517573 | 10.08x |
+| 9 | 0.005755 | 0.000760 | 7.57x |
+| 10 | 0.058139 | 0.007004 | 8.30x |
+| 11 | 0.646287 | 0.073933 | 8.74x |
+| 12 | 7.837886 | 0.823547 | 9.51x |
+| 13 | 103.657193 | 10.509555 | 9.86x |
+| 14 | 1447.410141 | 142.938323 | 10.12x |
 
 [//]: # (UNIQUE_PP_ALGO_BENCHMARK_DATA_SECTION_END_DO_NOT_REMOVE)
 
