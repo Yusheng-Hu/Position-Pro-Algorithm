@@ -194,23 +194,6 @@ Traditional approaches, such as the classic Myrvold-Ruskey algorithm, typically 
 
 **PositionPure (PP)** explores a different path by treating permutations as an **analytical mapping**. This project introduces an alternative framework designed to decouple individual elements from the sequential dependency chain, facilitating new approaches to large-scale computation:
 
-### 💡 Core Concepts
-
-* **On-Demand "Lazy" Access:** Determine the value at any given index $k$ without the need to allocate or generate the full array. This "zero-memory" approach offers a practical way to handle $N > 10^9$ where memory overhead becomes a bottleneck.
-* **Independent Parallelism:** Because each position can be traced independently, computation can be distributed across multiple cores or nodes with minimal inter-thread communication.
-* **Analytical Lookup:** By shifting from process simulation to mapping analysis, the algorithm provides forward and backward tracking capabilities that remain stable even as $N$ grows beyond traditional memory limits.
-
----
-
-### 🔍 Architectural Comparison
-
-| Feature | Sequential Models (e.g., Myrvold-Ruskey) | PositionPure (Analytical Approach) |
-| :--- | :--- | :--- |
-| **Methodology** | Sequential Swapping | Path-independent Mapping |
-| **Access Pattern** | Full generation before access | On-demand random access |
-| **Scalability** | Optimized for single-node throughput | Optimized for distributed/decoupled tasks |
-| **Resource Focus** | Performance through state-density | Flexibility through analytical lookup |
-
 ---
 
 ## 📢 Important Update: From "Position Pro" to "Position Pure"
