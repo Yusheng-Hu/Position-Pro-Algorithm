@@ -1,54 +1,46 @@
-name: Position Pure Performance Report
-
-on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
-  workflow_dispatch:
-
-jobs:
-  benchmark:
-    name: Run PP vs MR Benchmark
-    runs-on: ubuntu-latest
-    
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Install Dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y g++ build-essential
-
-      - name: Build and Run Rank Benchmark
+- name: Build and Run Rank Benchmark
         working-directory: ./PermutationIndexing
         run: |
-          # Compile with high optimization and native architecture support
+          # 1. Compile
           g++ -O3 -march=native map_perm_algorithms.cpp map_algorithm_test.cpp -o benchmark_rank
           
+          # 2. Run and Redirect output to file
+          # Ensure we create a fresh file with '>'
           echo "## Position Pure (PP) Rank Performance Report" > rank_report.md
-          echo "Running on: $(lscpu | grep 'Model name' | cut -f 2 -d ":")" >> rank_report.md
-          echo "\`\`\`text" >> rank_report.md
+          echo "Running on: $(lscpu | grep 'Model name' | cut -f 2 -d ":" || echo "GitHub Runner CPU")" >> rank_report.md
+          echo -e "\n\`\`\`text" >> rank_report.md
+          
+          # Execute and capture output
           ./benchmark_rank >> rank_report.md
-          echo "\`\`\`" >> rank_report.md
+          
+          echo -e "\`\`\`\n" >> rank_report.md
+          
+          # Debug: check if file exists
+          ls -lh rank_report.md
 
       - name: Build and Run Unrank Benchmark
         working-directory: ./PermutationIndexing
         run: |
-          # Use sed to switch testing focus from Rank to Unrank without modifying source files
+          # 1. Temporary switch to Unrank
           sed -i 's/measure_speed(MR_rank/measure_speed(MR_unrank/g' map_algorithm_test.cpp
           sed -i 's/measure_speed(PositionPure_rank/measure_speed(PositionPure_unrank/g' map_algorithm_test.cpp
           
+          # 2. Recompile
           g++ -O3 -march=native map_perm_algorithms.cpp map_algorithm_test.cpp -o benchmark_unrank
           
+          # 3. Create report
           echo "## Position Pure (PP) Unrank Performance Report" > unrank_report.md
-          echo "\`\`\`text" >> unrank_report.md
+          echo -e "\n\`\`\`text" >> unrank_report.md
           ./benchmark_unrank >> unrank_report.md
-          echo "\`\`\`" >> unrank_report.md
+          echo -e "\`\`\`\n" >> unrank_report.md
+          
+          # Debug: check if file exists
+          ls -lh unrank_report.md
 
       - name: Publish Performance Summary
+        working-directory: ./PermutationIndexing
         run: |
-          cat ./PermutationIndexing/rank_report.md >> $GITHUB_STEP_SUMMARY
-          echo "---" >> $GITHUB_STEP_SUMMARY
-          cat ./Perm
+          # Using find to be safe, but direct cat should work now
+          [ -f rank_report.md ] && cat rank_report.md >> $GITHUB_STEP_SUMMARY
+          echo -e "\n---\n" >> $GITHUB_STEP_SUMMARY
+          [ -f unrank_report.md ] && cat unrank_report.md >> $GITHUB_STEP_SUMMARY
