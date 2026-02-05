@@ -69,7 +69,7 @@ jobs:
             updated_content = (
                 parts_before + "\n\n" + 
                 start_marker + "\n\n" + 
-                "### 🐍 Position Pro Iterator Performance (PyPy)\n" +
+                "### 🐍 Position Pure Iterator Performance (PyPy)\n" +
                 new_data + "\n\n" + 
                 end_marker + "\n\n" + 
                 parts_after + "\n"
