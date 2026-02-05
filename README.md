@@ -109,7 +109,6 @@ g++ -O3 -std=c++11 -march=native -flto -ffast-math -fomit-frame-pointer
 
 #### **Key Insights**
 * **Significant Speedup:** `permPure_full` consistently outperforms Heap's Algorithm by a factor of approximately **7x**.
-* **High Throughput:** For $n=13$, `permPure_full` processes over **6.2 billion permutations** in under 11 seconds, showcasing exceptional instruction-level efficiency.
 * **Algorithmic Efficiency:** The performance gap highlights the superior memory access patterns and lower computational overhead inherent in the PositionPure algorithm.
 * **Scalability:** As the permutation space grows factorially, the performance gap remains stable, demonstrating excellent algorithmic efficiency for large-scale generation.
 
