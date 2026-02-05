@@ -5,16 +5,6 @@
 ![Permutation Generation](https://img.shields.io/badge/Field-Combinatorial_Algorithms-blue)
 [![ORCID](https://img.shields.io/badge/ORCID-0009--0005--1980--5751-A6CE39?logo=orcid&logoColor=white)](https://orcid.org/0009-0005-1980-5751)
 [![GitHub stars](https://img.shields.io/github/stars/Yusheng-Hu/Position-Pure-Algorithm?style=social)](https://github.com/Yusheng-Hu/Position-Pure-Algorithm)
----
-
-## 📢 Important Update: From "Position Pro" to "Position Pure"
-
-**Please note:** Starting from version **v1.1.1**, this algorithm has been officially renamed from **Position Pro** to **Position Pure (PP)**.
-
-### Why the name change?
-1. **Trademark Consideration:** We found that "Position Pro" is a registered trademark in several industrial and commercial sectors. To ensure the algorithm's academic independence and avoid legal confusion, we have transitioned to a unique name.
-2. **Technical Essence (Why "Pure"?):** The name **"Pure"** more accurately describes the algorithm's technical implementation. In computer science, "pure" often implies a clean, branchless execution flow. 
-3. **Core Feature - Branchless Logic:** Unlike the base version, **Position Pure (PP)** achieves its linear-time performance through direct element-wise shifting and replacement. **It eliminates conditional branching (no `if` statements in the core loop)**, leading to a "purer" and faster execution path on modern CPUs.
 
 ---
 
@@ -33,7 +23,7 @@ Official implementation and interactive visualizations of the **Position Pure (P
 ## 💻 Source Code
 The core C++ implementations of the algorithms can be found here:
 * **[map_perm_algorithms.cpp](./map_perm_algorithms.cpp)**: Includes `Position_unrank`, `Position_rank`, `PositionPure_unrank`, and `PositionPure_rank`.
-* **[permPure_full.cpp](./permPure_full.cpp)**: Serves as a high-performance reference implementation for generating all permutations of a set using the **PositionPure** iterative algorithm. 
+* **[permPure_full.cpp](./FullPermutation/permPure_full.cpp)**: Serves as a high-performance reference implementation for generating all permutations of a set using the **PositionPure** iterative algorithm. 
 
 ## 🛠️ Usage
 These algorithms achieve $O(n)$ time complexity by optimizing the indexing logic $D[i]$, providing a more efficient alternative to the classic Myrvold-Ruskey method.
@@ -52,16 +42,6 @@ The **PositionPure** algorithm is a high-performance, iterative approach to gene
 * **Hardware Affinity Binding**: Includes native Windows API support (`SetThreadAffinityMask`) to lock execution to a specific logical core, minimizing context-switching noise and cache misses.
 * **High-Precision Benchmarking**: Performance is measured using the Windows High-Precision Event Timer (`QueryPerformanceCounter`) for nanosecond-level accuracy.
 * 
-
-### Performance Benchmarks
-
-The following results were recorded on a single core of a mobile-class processor. Despite the modest clock speed, the algorithm maintains massive throughput, processing over a billion permutations per second.
-
-**Test Environment:**
-* **CPU**: Intel(R) Core(TM) i7-8550U @ 1.80GHz
-* **Affinity**: Bound to Core 3
-* **OS**: Windows 10/11
-* **Compiler**: GCC/MinGW with `-O3` optimization
 
 ## 🛠 Compilation Commands
 
@@ -191,3 +171,14 @@ Traditional approaches, such as the classic Myrvold-Ruskey algorithm, typically 
 | **Access Pattern** | Full generation before access | On-demand random access |
 | **Scalability** | Optimized for single-node throughput | Optimized for distributed/decoupled tasks |
 | **Resource Focus** | Performance through state-density | Flexibility through analytical lookup |
+
+---
+
+## 📢 Important Update: From "Position Pro" to "Position Pure"
+
+**Please note:** Starting from version **v1.1.1**, this algorithm has been officially renamed from **Position Pro** to **Position Pure (PP)**.
+
+### Why the name change?
+1. **Trademark Consideration:** We found that "Position Pro" is a registered trademark in several industrial and commercial sectors. To ensure the algorithm's academic independence and avoid legal confusion, we have transitioned to a unique name.
+2. **Technical Essence (Why "Pure"?):** The name **"Pure"** more accurately describes the algorithm's technical implementation. In computer science, "pure" often implies a clean, branchless execution flow. 
+3. **Core Feature - Branchless Logic:** Unlike the base version, **Position Pure (PP)** achieves its linear-time performance through direct element-wise shifting and replacement. **It eliminates conditional branching (no `if` statements in the core loop)**, leading to a "purer" and faster execution path on modern CPUs.
