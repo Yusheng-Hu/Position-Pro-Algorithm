@@ -5,6 +5,7 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+# Grant write permissions for the GITHUB_TOKEN to update README.md
 permissions:
   contents: write
 
@@ -12,75 +13,92 @@ jobs:
   benchmark:
     runs-on: ubuntu-latest
     env:
-      # High-performance optimization flags
-      CXX_FLAGS: "-O3 -ffast-math -march=native"
+      # High-performance optimization flags as requested
+      CXX_FLAGS: "-O3 -std=c++11 -march=native -flto -ffast-math -fomit-frame-pointer"
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Compile programs
+    - name: Compile Programs
       run: |
         # Navigating to the FullPermutation directory
         cd FullPermutation
-        g++ $CXX_FLAGS heap_perm.cpp -o heap_perm
-        g++ $CXX_FLAGS permpure_full.cpp -o permpure_full
+        g++ $CXX_FLAGS heap_perm.cpp -o heap_test -pthread
+        g++ $CXX_FLAGS permpure_full.cpp -o pure_test -pthread
 
     - name: Run Benchmarks
       run: |
         cd FullPermutation
-        # Create a temporary markdown table with UTC timestamp
+        # Generate temporary benchmark results in Markdown format
         echo "#### Last Automated Run: $(date -u) (UTC)" > results.md
         echo "| N | Heap Algorithm (s) | PP Algorithm (s) | Speedup (Heap/PP) |" >> results.md
         echo "|---|---|---|---|" >> results.md
         
-        # Testing for N = 9, 10 as requested
+        # Benchmarking for N = 9 and 10
         for n in 9 10
         do
-          echo "Processing N=$n..."
-          # Execute and extract execution time from stdout
-          H_TIME=$(./heap_perm $n | grep "EXECUTION_TIME:" | awk '{print $2}')
-          P_TIME=$(./permpure_full $n | grep "EXECUTION_TIME:" | awk '{print $2}')
+          echo "Benchmarking N=$n..."
+          # Execute and capture execution time from standardized output
+          H_TIME=$(./heap_test $n | grep "EXECUTION_TIME:" | awk '{print $2}')
+          P_TIME=$(./pure_test $n | grep "EXECUTION_TIME:" | awk '{print $2}')
           
-          # Calculate speedup using 'bc'
+          # Calculate speedup using 'bc' for floating point division
           SPEEDUP=$(echo "scale=2; $H_TIME / $P_TIME" | bc)
           
           echo "| $n | $H_TIME | $P_TIME | ${SPEEDUP}x |" >> results.md
         done
         
-        # Sync results to GitHub Action Summary
+        # Display the table in GitHub Actions Summary
         cat results.md >> $GITHUB_STEP_SUMMARY
 
-    - name: Update README.md
+    - name: Update README.md via Python
+      shell: python
       run: |
-        # Use line numbers to split the file, which is more reliable than range matching
-        START_LINE=$(grep -n "" README.md | cut -d: -f1)
-        END_LINE=$(grep -n "" README.md | cut -d: -f1)
+        import os
+        import sys
 
-        if [ -z "$START_LINE" ] || [ -z "$END_LINE" ]; then
-          echo "Error: Benchmark markers not found in README.md"
-          exit 1
-        fi
+        # Unique markers defined in your README.md
+        start_marker = "[//]: # (UNIQUE_PP_ALGO_BENCHMARK_DATA_SECTION_START_DO_NOT_REMOVE)"
+        end_marker = "[//]: # (UNIQUE_PP_ALGO_BENCHMARK_DATA_SECTION_END_DO_NOT_REMOVE)"
 
-        # 1. Get header (up to the start marker)
-        head -n "$START_LINE" README.md > header.tmp
-        
-        # 2. Get footer (from the end marker to the end of file)
-        tail -n +"$END_LINE" README.md > footer.tmp
-        
-        # 3. Concatenate all parts
-        cat header.tmp > README.md
-        cat FullPermutation/results.md >> README.md
-        cat footer.tmp >> README.md
-        
-        rm header.tmp footer.tmp
+        # Load the newly generated benchmark data
+        results_path = "FullPermutation/results.md"
+        if not os.path.exists(results_path):
+            print(f"Error: {results_path} not found.")
+            sys.exit(1)
+            
+        with open(results_path, "r") as f:
+            new_table = f.read()
 
-    - name: Commit and Push changes
+        # Load the current README.md content
+        readme_path = "README.md"
+        with open(readme_path, "r", encoding="utf-8") as f:
+            content = f.read()
+
+        # Logic to replace content between the unique markers
+        if start_marker in content and end_marker in content:
+            # Extract content before the start marker
+            prefix = content.split(start_marker)[0]
+            # Extract content after the end marker
+            suffix = content.split(end_marker)[-1]
+            
+            # Construct the updated README content
+            updated_content = f"{prefix}{start_marker}\n\n{new_table}\n\n{end_marker}{suffix}"
+            
+            with open(readme_path, "w", encoding="utf-8") as f:
+                f.write(updated_content)
+            print("README.md has been successfully updated.")
+        else:
+            print("Error: Could not find the unique markers in README.md.")
+            sys.exit(1)
+
+    - name: Commit and Push Changes
       run: |
+        # Setting up Git bot identity
         git config --global user.name "github-actions[bot]"
         git config --global user.email "github-actions[bot]@users.noreply.github.com"
         git add README.md
         
-        # Commit only if changes exist to prevent infinite loops
-        # [skip ci] is used to prevent re-triggering the same workflow
-        git diff --quiet && git diff --staged --quiet || (git commit -m "docs: automated benchmark update [skip ci]" && git push)
+        # Commit and push if changes exist. [skip ci] prevents infinite build loops.
+        git diff --quiet && git diff --staged --quiet || (git commit -m "docs: update benchmark results [skip ci]" && git push)
