@@ -1,0 +1,49 @@
+name: Algorithm Performance Comparison
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch: # Allows manual trigger
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    # Define optimization flags as environment variables
+    env:
+      CXX_FLAGS: "-O3 -ffast-math -march=native"
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Compile programs
+      run: |
+        cd FullPermutation
+        g++ $CXX_FLAGS heap_perm.cpp -o heap_perm
+        g++ $CXX_FLAGS permpure_full.cpp -o permpure_full
+
+    - name: Run Benchmarks and Collect Data
+      run: |
+        cd FullPermutation
+        # Create the table header for GitHub Summary
+        echo "| N | Heap Algorithm (s) | PP Algorithm (s) |" >> $GITHUB_STEP_SUMMARY
+        echo "|---|---|---|" >> $GITHUB_STEP_SUMMARY
+        
+        # Test for n = 10, 11, 12, 13
+        for n in 10 11 12 13
+        do
+          echo "Running benchmark for N=$n..."
+          
+          # Execute Heap's algorithm and extract execution time
+          HEAP_TIME=$(./heap_perm $n | grep "EXECUTION_TIME:" | awk '{print $2}')
+          
+          # Execute PP algorithm and extract execution time
+          PP_TIME=$(./permpure_full $n | grep "EXECUTION_TIME:" | awk '{print $2}')
+          
+          # Append results to the summary table
+          echo "| $n | $HEAP_TIME | $PP_TIME |" >> $GITHUB_STEP_SUMMARY
+        done
+
+    - name: Finalize Report
+      run: |
+        echo "Benchmark completed. Please check the Job Summary for the performance table."
