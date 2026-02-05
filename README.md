@@ -92,16 +92,16 @@ g++ -O3 -std=c++11 -march=native -flto -ffast-math -fomit-frame-pointer
 
 [//]: # (UNIQUE_PP_ALGO_BENCHMARK_DATA_SECTION_START_DO_NOT_REMOVE)
 
-#### Last Automated Run: Thu Feb  5 07:15:56 UTC 2026 (UTC)
+#### Last Automated Run: Thu Feb  5 14:49:27 UTC 2026 (UTC)
 
 | N | Heap Algorithm (s) | PP Algorithm (s) | Speedup (Heap/PP) |
 |---|---|---|---|
-| 9 | 0.005755 | 0.000760 | 7.57x |
-| 10 | 0.058139 | 0.007004 | 8.30x |
-| 11 | 0.646287 | 0.073933 | 8.74x |
-| 12 | 7.837886 | 0.823547 | 9.51x |
-| 13 | 103.657193 | 10.509555 | 9.86x |
-| 14 | 1447.410141 | 142.938323 | 10.12x |
+| 9 | 0.005818 | 0.000662 | 8.78x |
+| 10 | 0.059210 | 0.007390 | 8.01x |
+| 11 | 0.655020 | 0.083340 | 7.85x |
+| 12 | 7.787339 | 0.942191 | 8.26x |
+| 13 | 103.183169 | 11.819807 | 8.72x |
+| 14 | 1467.425878 | 167.218194 | 8.77x |
 
 [//]: # (UNIQUE_PP_ALGO_BENCHMARK_DATA_SECTION_END_DO_NOT_REMOVE)
 
