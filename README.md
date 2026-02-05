@@ -122,7 +122,15 @@ At the request of Reddit users and other community members, a performance compar
 * **Runtime Environment**: The tests were performed using **PyPy3**. Since the standard `itertools` library is C-optimized, using PyPy3 helps bridge the low-level language gap, allowing for a more authentic comparison of algorithmic efficiency.
 * **Results**: Benchmark tests show that this algorithm improves performance by at least **1.4x**, with potential gains reaching over **2x** compared to the standard library.
 * **Future Plans**: For applications requiring even higher performance, a **C-compiled version** should be considered.
+
 [//]: # (PYTHON_PP_ITER_BENCHMARK_START)
+
+### 🐍 Position Pro Iterator Performance (PyPy)
+| N | Total Permutations | Itertools (s) | Position Pro (s) | Speed-up |
+| :--- | :--- | :--- | :--- | :--- |
+| 10 | 3,628,800 | 0.1074s | 0.0680s | **1.58x** |
+| 11 | 39,916,800 | 1.2123s | 0.5712s | **2.12x** |
+| 12 | 479,001,600 | 14.9967s | 6.7067s | **2.24x** |
 
 [//]: # (PYTHON_PP_ITER_BENCHMARK_END)
 
