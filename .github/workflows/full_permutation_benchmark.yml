@@ -1,14 +1,17 @@
-name: Algorithm Performance Comparison
+name: Automated Benchmark & README Update
 
 on:
   push:
     branches: [ main ]
-  workflow_dispatch: # Allows manual trigger from the Actions tab
+  workflow_dispatch:
+
+# Grant write permission to allow the bot to push changes back to README
+permissions:
+  contents: write
 
 jobs:
   benchmark:
     runs-on: ubuntu-latest
-    # Optimization flags defined as environment variables for consistency
     env:
       CXX_FLAGS: "-O3 -ffast-math -march=native"
 
@@ -16,40 +19,51 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Compile Programs
+    - name: Compile programs
       run: |
-        # Navigating to the specific directory for compilation
+        # Use the paths from your project structure
         cd FullPermutation
         g++ $CXX_FLAGS heap_perm.cpp -o heap_perm
         g++ $CXX_FLAGS permpure_full.cpp -o permpure_full
 
-    - name: Run Benchmarks and Generate Table
+    - name: Run Benchmarks
       run: |
         cd FullPermutation
+        # Create a temporary markdown table
+        echo "#### Last Run: $(date -u)" > results.md
+        echo "| N | Heap Algorithm (s) | PP Algorithm (s) | Speedup (Heap/PP) |" >> results.md
+        echo "|---|---|---|---|" >> results.md
         
-        # Initialize GitHub Step Summary with Markdown table header
-        echo "### Permutation Algorithm Performance (N=10 to 13)" >> $GITHUB_STEP_SUMMARY
-        echo "| N | Heap Algorithm (s) | PP Algorithm (s) | Speedup (Heap/PP) |" >> $GITHUB_STEP_SUMMARY
-        echo "|---|---|---|---|" >> $GITHUB_STEP_SUMMARY
-        
-        # Iterating through the N values
         for n in 10 11 12 13
         do
-          echo "Processing N=$n..."
-          
-          # Execute Heap Algorithm and extract time
-          HEAP_TIME=$(./heap_perm $n | grep "EXECUTION_TIME:" | awk '{print $2}')
-          
-          # Execute PP Algorithm and extract time
-          PP_TIME=$(./permpure_full $n | awk -F': ' '/EXECUTION_TIME/ {print $2}')
-          
-          # Calculate simple speedup ratio (optional but helpful)
-          # Note: Using 'bc' for floating point division in shell
-          SPEEDUP=$(echo "scale=2; $HEAP_TIME / $PP_TIME" | bc)
-          
-          # Write the result row to the summary table
-          echo "| $n | $HEAP_TIME | $PP_TIME | ${SPEEDUP}x |" >> $GITHUB_STEP_SUMMARY
+          H_TIME=$(./heap_perm $n | grep "EXECUTION_TIME:" | awk '{print $2}')
+          P_TIME=$(./permpure_full $n | grep "EXECUTION_TIME:" | awk '{print $2}')
+          SPEEDUP=$(echo "scale=2; $H_TIME / $P_TIME" | bc)
+          echo "| $n | $H_TIME | $P_TIME | ${SPEEDUP}x |" >> results.md
         done
+        
+        # Display in GitHub Summary as well
+        cat results.md >> $GITHUB_STEP_SUMMARY
 
-    - name: Finalize
-      run: echo "Benchmark successfully completed. Check the Summary tab for the results."
+    - name: Update README.md
+      run: |
+        # Read the generated table
+        TABLE_CONTENT=$(cat FullPermutation/results.md)
+        
+        # Use sed to delete everything between the markers and insert the new table
+        # We use a temp file to avoid complex escaping issues in sed
+        sed -n '//q;p' README.md > README.tmp
+        echo "" >> README.tmp
+        cat FullPermutation/results.md >> README.tmp
+        echo "" >> README.tmp
+        sed -n '//,$p' README.md | tail -n +2 >> README.tmp
+        
+        mv README.tmp README.md
+
+    - name: Commit and Push
+      run: |
+        git config --global user.name "github-actions[bot]"
+        git config --global user.email "github-actions[bot]@users.noreply.github.com"
+        git add README.md
+        # Only push if changes exist to avoid infinite loops
+        git diff --quiet && git diff --staged --quiet || (git commit -m "docs: auto-update benchmark results [skip ci]" && git push)
