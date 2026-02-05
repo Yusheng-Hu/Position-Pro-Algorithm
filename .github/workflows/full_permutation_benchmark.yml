@@ -5,6 +5,11 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+# Prevent race conditions by limiting concurrency to one run at a time
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: write
 
@@ -12,16 +17,19 @@ jobs:
   benchmark:
     runs-on: ubuntu-latest
     env:
-      # Comprehensive aggressive optimization flags as defined in the project
+      # Aggressive optimization flags for C++ performance
       CXX_FLAGS: "-O3 -std=c++11 -march=native -flto -ffast-math -fomit-frame-pointer"
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
+      with:
+        # Fetch full history to ensure rebase works correctly during push
+        fetch-depth: 0
 
     - name: Compile Programs
       run: |
-        # Ensure the programs are compiled with high-performance flags
+        # Use provided optimization flags to compile the benchmark executables
         cd FullPermutation
         g++ $CXX_FLAGS heap_perm.cpp -o heap_test -pthread
         g++ $CXX_FLAGS permpure_full.cpp -o pure_test -pthread
@@ -29,21 +37,28 @@ jobs:
     - name: Run Benchmarks
       run: |
         cd FullPermutation
-        # Initialize the benchmark results table
+        # Prepare the benchmark results table in Markdown format
         echo "#### Last Automated Run: $(date -u) (UTC)" > results.md
         echo "" >> results.md
         echo "| N | Heap Algorithm (s) | PP Algorithm (s) | Speedup (Heap/PP) |" >> results.md
         echo "|---|---|---|---|" >> results.md
         
-        # Testing N from 9 to 14 to highlight the efficiency of the PP algorithm
+        # Iterating from N=9 to N=14 to demonstrate PP algorithm scalability
         for n in 9 10 11 12 13 14
         do
-          echo "Running benchmark for N=$n..."
+          echo "Processing benchmark for N=$n..."
           H_TIME=$(./heap_test $n | grep "EXECUTION_TIME:" | awk '{print $2}')
           P_TIME=$(./pure_test $n | grep "EXECUTION_TIME:" | awk '{print $2}')
-          SPEEDUP=$(echo "scale=2; $H_TIME / $P_TIME" | bc)
+          
+          # Safety check: Prevent division by zero if timing is near-instant
+          if [ "$P_TIME" = "0" ] || [ "$P_TIME" = "0.000" ]; then
+            SPEEDUP="N/A"
+          else
+            SPEEDUP=$(echo "scale=2; $H_TIME / $P_TIME" | bc)
+          fi
           echo "| $n | $H_TIME | $P_TIME | ${SPEEDUP}x |" >> results.md
         done
+        # Output results to GitHub Step Summary for visibility
         cat results.md >> $GITHUB_STEP_SUMMARY
 
     - name: Update README.md via Python
@@ -52,43 +67,68 @@ jobs:
         import os
         import sys
 
+        # Define markers used for identifying the injection point in README.md
         start_marker = "[//]: # (UNIQUE_PP_ALGO_BENCHMARK_DATA_SECTION_START_DO_NOT_REMOVE)"
         end_marker = "[//]: # (UNIQUE_PP_ALGO_BENCHMARK_DATA_SECTION_END_DO_NOT_REMOVE)"
 
-        # Load the newly generated table
-        with open("FullPermutation/results.md", "r", encoding="utf-8") as f:
-            new_table = f.read().strip()
-
-        # Read the current content of README.md
-        with open("README.md", "r", encoding="utf-8") as f:
-            content = f.read()
+        # Read the newly generated benchmark data
+        try:
+            with open("FullPermutation/results.md", "r", encoding="utf-8") as f:
+                new_table = f.read().strip()
+            
+            with open("README.md", "r", encoding="utf-8") as f:
+                content = f.read()
+        except FileNotFoundError as e:
+            print(f"Error: Required file not found - {e}")
+            sys.exit(1)
 
         if start_marker in content and end_marker in content:
-            # Split the content and rebuild with strict block isolation
+            # Isolate prefix and suffix content around the benchmark block
             prefix = content.split(start_marker)[0].strip()
             suffix = content.split(end_marker)[-1].strip()
             
-            # Reconstruction with mandatory double-newlines to prevent rendering bleed-through
+            # Reconstruct README with new data and mandatory spacing for proper rendering
             updated_readme = (
                 prefix + "\n\n" + 
                 start_marker + "\n\n" + 
                 new_table + "\n\n" + 
                 end_marker + "\n\n" + 
-                suffix
+                suffix + "\n"
             )
             
             with open("README.md", "w", encoding="utf-8") as f:
                 f.write(updated_readme)
-            print("README.md updated successfully with N=14 results.")
+            print("README.md has been successfully updated.")
         else:
-            print("Error: Could not find markers.")
+            print("Error: Boundary markers not found in README.md.")
             sys.exit(1)
 
-    - name: Commit and Push
+    - name: Commit and Push Changes
       run: |
-        # Standard GitHub Actions bot configuration
+        # Configure Git bot identity
         git config --global user.name "github-actions[bot]"
         git config --global user.email "github-actions[bot]@users.noreply.github.com"
+        
         git add README.md
-        # Using [skip ci] to prevent recursive workflow triggers
-        git diff --quiet && git diff --staged --quiet || (git commit -m "docs: performance benchmark update N=14 [skip ci]" && git push)
+        
+        # Only proceed if the benchmark results actually changed the file
+        if ! git diff --quiet --staged; then
+          git commit -m "docs: auto-update performance benchmark N=14 [skip ci]"
+          
+          # Retry loop to handle potential push conflicts (Race Conditions)
+          for i in {1..5}; do
+            echo "Push attempt $i..."
+            # Rebase ensures local changes are applied on top of remote updates
+            git pull --rebase origin main
+            if git push; then
+              echo "Push completed successfully."
+              exit 0
+            fi
+            echo "Push rejected, retrying in 5 seconds..."
+            sleep 5
+          done
+          echo "Maximum push attempts reached. Operation failed."
+          exit 1
+        else
+          echo "No changes detected. Skipping push."
+        fi
