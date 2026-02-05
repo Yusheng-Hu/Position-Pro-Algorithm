@@ -73,6 +73,7 @@ g++ -O3 -std=c++11 -march=native -flto -ffast-math -fomit-frame-pointer heap_per
 
 # Compile Position-Pure
 g++ -O3 -std=c++11 -march=native -flto -ffast-math -fomit-frame-pointer permpure_full.cpp -o pure_test -pthread
+```
 
 [//]: # (UNIQUE_PP_ALGO_BENCHMARK_DATA_SECTION_START_DO_NOT_REMOVE)
 
