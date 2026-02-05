@@ -1,5 +1,5 @@
 """
-Position Pro (PP) Algorithm
+Position Pure (PP) Algorithm
 A high-performance permutation generation algorithm.
 
 Copyright (c) 2026 Yusheng Hu. All rights reserved.
@@ -13,7 +13,7 @@ import math
 
 def pp_permutations(n):
     """
-    Position Pro (PP) Algorithm - Iterator Implementation.
+    Position Pure (PP) Algorithm - Iterator Implementation.
     
     Generates all permutations of n elements. This implementation is 
     specifically optimized for JIT compilers (e.g., PyPy).
@@ -77,7 +77,7 @@ def run_performance_benchmarks(start_n=10, end_n=12):
     for _ in pp_permutations(9): pass
     for _ in itertools.permutations(range(9)): pass
         
-    print(f"| N | Total Permutations | Itertools (s) | Position Pro (s) | Speed-up |")
+    print(f"| N | Total Permutations | Itertools (s) | Position Pure (s) | Speed-up |")
     print(f"| :--- | :--- | :--- | :--- | :--- |")
     
     for n in range(start_n, end_n + 1):
@@ -87,7 +87,7 @@ def run_performance_benchmarks(start_n=10, end_n=12):
             pass
         t_std = time.perf_counter() - t0
 
-        # Benchmark Position Pro algorithm
+        # Benchmark Position Pure algorithm
         t1 = time.perf_counter()
         for _ in pp_permutations(n):
             pass
