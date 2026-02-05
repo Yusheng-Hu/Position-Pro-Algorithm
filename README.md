@@ -33,6 +33,37 @@ The **Position Pure (PP)** algorithm is built upon the foundational work of **We
 
 While the MR algorithm uses a specific swap-based approach, the PP method introduces a more intuitive indexing logic $D[i]$ that simplifies the implementation and enhances understanding of the mapping process.
 
+
+## 🚀 Industrial Benchmark: Position Pure (PP) vs. Myrvold-Ruskey (MR) 
+[//]: # (UNIQUE_PP_ALGO_BENCHMARK_DATA_SECTION_START_DO_NOT_REMOVE)
+
+#### Last Automated Run: Thu Feb 5 2026 (Environment: AMD EPYC 7763 64-Core Processor)
+
+**Ranking Performance (Permutation D → Factorial C)**
+| N | Distribution | MR (ns/it) | PP (ns/it) | Speedup (MR/PP) |
+|---|---|---|---|---|
+| 1,000 | Random | 781.2 | 631.0 | **1.24x** |
+| 1,000 | Sorted | 716.7 | 629.8 | **1.14x** |
+| 1,000 | Reverse | 777.5 | 627.4 | **1.24x** |
+| 100,000 | Random | 118,338.0 | 94,305.1 | **1.25x** |
+| 100,000 | Sorted | 72,964.4 | 62,469.4 | **1.17x** |
+| 100,000 | Reverse | 83,642.6 | 66,424.8 | **1.26x** |
+| 1,000,000 | Random | 1,591,847.3 | 1,190,836.6 | **1.34x** |
+| 1,000,000 | Sorted | 714,646.0 | 624,558.3 | **1.14x** |
+| 1,000,000 | Reverse | 798,270.7 | 669,587.0 | **1.19x** |
+
+**Unranking Performance (Factorial C → Permutation D)**
+| N | Distribution | MR (ns/it) | PP (ns/it) | Speedup (MR/PP) |
+|---|---|---|---|---|
+| 1,000 | Random | 1,258.0 | 628.8 | **2.00x** |
+| 100,000 | Random | 111,289.0 | 89,936.7 | **1.24x** |
+| 1,000,000 | Random | 1,526,315.5 | 1,213,411.3 | **1.26x** |
+
+[//]: # (UNIQUE_PP_ALGO_BENCHMARK_DATA_SECTION_END_DO_NOT_REMOVE)
+
+
+
+
 ## PositionPure: Iterative Permutation Generation
 
 The **PositionPure** algorithm is a high-performance, iterative approach to generating all permutations of a set. By utilizing an iterative state machine rather than traditional recursion, it significantly reduces function call overhead and optimizes CPU branch prediction efficiency.
