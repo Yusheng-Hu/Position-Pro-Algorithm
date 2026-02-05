@@ -5,7 +5,6 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
-# Grant write permissions for the GITHUB_TOKEN to update README.md
 permissions:
   contents: write
 
@@ -13,7 +12,7 @@ jobs:
   benchmark:
     runs-on: ubuntu-latest
     env:
-      # High-performance optimization flags as requested
+      # Comprehensive aggressive optimization flags
       CXX_FLAGS: "-O3 -std=c++11 -march=native -flto -ffast-math -fomit-frame-pointer"
 
     steps:
@@ -22,7 +21,6 @@ jobs:
 
     - name: Compile Programs
       run: |
-        # Navigating to the FullPermutation directory
         cd FullPermutation
         g++ $CXX_FLAGS heap_perm.cpp -o heap_test -pthread
         g++ $CXX_FLAGS permpure_full.cpp -o pure_test -pthread
@@ -30,26 +28,18 @@ jobs:
     - name: Run Benchmarks
       run: |
         cd FullPermutation
-        # Generate temporary benchmark results in Markdown format
+        # Generate temporary results (N=9, 10)
         echo "#### Last Automated Run: $(date -u) (UTC)" > results.md
         echo "| N | Heap Algorithm (s) | PP Algorithm (s) | Speedup (Heap/PP) |" >> results.md
         echo "|---|---|---|---|" >> results.md
         
-        # Benchmarking for N = 9 and 10
         for n in 9 10
         do
-          echo "Benchmarking N=$n..."
-          # Execute and capture execution time from standardized output
           H_TIME=$(./heap_test $n | grep "EXECUTION_TIME:" | awk '{print $2}')
           P_TIME=$(./pure_test $n | grep "EXECUTION_TIME:" | awk '{print $2}')
-          
-          # Calculate speedup using 'bc' for floating point division
           SPEEDUP=$(echo "scale=2; $H_TIME / $P_TIME" | bc)
-          
           echo "| $n | $H_TIME | $P_TIME | ${SPEEDUP}x |" >> results.md
         done
-        
-        # Display the table in GitHub Actions Summary
         cat results.md >> $GITHUB_STEP_SUMMARY
 
     - name: Update README.md via Python
@@ -58,47 +48,42 @@ jobs:
         import os
         import sys
 
-        # Unique markers defined in your README.md
+        # Unique markers (Standard Markdown hidden comments)
         start_marker = "[//]: # (UNIQUE_PP_ALGO_BENCHMARK_DATA_SECTION_START_DO_NOT_REMOVE)"
         end_marker = "[//]: # (UNIQUE_PP_ALGO_BENCHMARK_DATA_SECTION_END_DO_NOT_REMOVE)"
 
-        # Load the newly generated benchmark data
-        results_path = "FullPermutation/results.md"
-        if not os.path.exists(results_path):
-            print(f"Error: {results_path} not found.")
-            sys.exit(1)
-            
-        with open(results_path, "r") as f:
-            new_table = f.read()
+        # Load results
+        with open("FullPermutation/results.md", "r") as f:
+            new_table = f.read().strip()
 
-        # Load the current README.md content
-        readme_path = "README.md"
-        with open(readme_path, "r", encoding="utf-8") as f:
+        # Load README
+        with open("README.md", "r", encoding="utf-8") as f:
             content = f.read()
 
-        # Logic to replace content between the unique markers
         if start_marker in content and end_marker in content:
-            # Extract content before the start marker
             prefix = content.split(start_marker)[0]
-            # Extract content after the end marker
             suffix = content.split(end_marker)[-1]
             
-            # Construct the updated README content
-            updated_content = f"{prefix}{start_marker}\n\n{new_table}\n\n{end_marker}{suffix}"
+            # Reconstruct with MANDATORY double newlines for proper Markdown rendering
+            # We ensure the markers and the table are separated by empty lines
+            updated_content = (
+                f"{prefix.strip()}\n\n"
+                f"{start_marker}\n\n"
+                f"{new_table}\n\n"
+                f"{end_marker}\n\n"
+                f"{suffix.strip()}"
+            )
             
-            with open(readme_path, "w", encoding="utf-8") as f:
+            with open("README.md", "w", encoding="utf-8") as f:
                 f.write(updated_content)
-            print("README.md has been successfully updated.")
+            print("README.md repaired and updated.")
         else:
-            print("Error: Could not find the unique markers in README.md.")
+            print("Error: Markers not found.")
             sys.exit(1)
 
-    - name: Commit and Push Changes
+    - name: Commit and Push
       run: |
-        # Setting up Git bot identity
         git config --global user.name "github-actions[bot]"
         git config --global user.email "github-actions[bot]@users.noreply.github.com"
         git add README.md
-        
-        # Commit and push if changes exist. [skip ci] prevents infinite build loops.
-        git diff --quiet && git diff --staged --quiet || (git commit -m "docs: update benchmark results [skip ci]" && git push)
+        git diff --quiet && git diff --staged --quiet || (git commit -m "docs: fix rendering and update benchmarks [skip ci]" && git push)
