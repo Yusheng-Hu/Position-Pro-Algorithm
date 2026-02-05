@@ -1,72 +1,122 @@
-#include "windows.h" 
-#include <chrono>
-#include <functional>
 #include <iostream>
-#include <random>
 #include <vector>
+#include <numeric>
+#include <algorithm>
+#include <random>
+#include <chrono>
+#include <string>
+#include <iomanip>
+#include <cassert>
 #include "map_perm_algorithms.h"
 
 using namespace std;
-using namespace chrono;
 
-// 1. Modify the test framework to accept pre-generated data
-long long runAlgorithmTest(const string &algorithmName, 
-                         void (*algorithm)(const vector<int>&, vector<int>&),
-                         const vector<vector<int>>& C_samples, 
-                         int n, long long maxCount) {
-    long long checksum = 0;
-    vector<int> D(n); // Allocate D array only once at the beginning
+/**
+ * 接口转换适配器 (Interface Adapter)
+ * 解决测试代码中 MR_rank 与算法库中 MyrvoldRuskey_rank 名称不一致的问题
+ */
+void MR_rank(const vector<int> &D, vector<int> &C) {
+    MyrvoldRuskey_rank(D, C);
+}
 
-    // Start timing: only includes algorithm core loop
-    auto start = high_resolution_clock::now();
+void MR_unrank(const vector<int> &C, vector<int> &D) {
+    MyrvoldRuskey_unrank(C, D);
+}
 
-    for (long long count = 0; count < maxCount; ++count) {
-        // Directly reference pre-generated samples without recalculation
-        algorithm(C_samples[count % C_samples.size()], D);
-        checksum += D[0] ^ D[n / 2] ^ D[n - 1]; 
+// --- 正确性校验函数 ---
+bool verify_logic(int n) {
+    vector<int> original(n), C(n), restored(n);
+    iota(original.begin(), original.end(), 0);
+    mt19937 g(42);
+    
+    // 校验三种典型分布
+    vector<string> cases = {"Sorted", "Reverse", "Random"};
+    for (const auto& name : cases) {
+        if (name == "Reverse") reverse(original.begin(), original.end());
+        if (name == "Random") shuffle(original.begin(), original.end(), g);
+
+        // PP 校验
+        PositionPure_rank(original, C);
+        PositionPure_unrank(C, restored);
+        for (int i = 0; i < n; ++i) {
+            if (original[i] != restored[i]) return false;
+        }
+
+        // MR 校验
+        MR_rank(original, C);
+        MR_unrank(C, restored);
+        for (int i = 0; i < n; ++i) {
+            if (original[i] != restored[i]) return false;
+        }
+    }
+    return true;
+}
+
+// --- 性能测试核心 ---
+typedef void (*RankFunc)(const vector<int>&, vector<int>&);
+
+double measure_speed(RankFunc func, int n, int its, const string& dist) {
+    vector<int> D(n), C(n);
+    iota(D.begin(), D.end(), 0);
+    if (dist == "Reverse") reverse(D.begin(), D.end());
+    if (dist == "Random") {
+        mt19937 g(123);
+        shuffle(D.begin(), D.end(), g);
     }
 
-    auto end = high_resolution_clock::now();
-    auto duration = duration_cast<microseconds>(end - start);
+    // 热身阶段
+    func(D, C);
 
-    cout << algorithmName << " - n = " << n << ", count = " << maxCount << endl;
-    cout << "Total Execution time: " << duration.count() / 1e6 << " seconds" << endl;
-    cout << "Average time per iteration: " << (double)duration.count() / maxCount << " microseconds" << endl;
-    cout << "Checksum result: " << checksum << endl; 
-    cout << "----------------------------------------" << endl;
-
-    return maxCount;
+    auto start = chrono::high_resolution_clock::now();
+    for (int i = 0; i < its; ++i) {
+        func(D, C);
+    }
+    auto end = chrono::high_resolution_clock::now();
+    
+    chrono::duration<double, nano> diff = end - start;
+    return diff.count() / its;
 }
 
 int main() {
-    // Bind thread to CPU core 3 (0-based indexing)
-    HANDLE thread = GetCurrentThread();
-    DWORD_PTR mask = 1 << 3; // Core 3 corresponds to bit 3
-    SetThreadAffinityMask(thread, mask);
+    // 阶段 1: 正确性验证
+    cout << "====================================================" << endl;
+    cout << "PHASE 1: CORRECTNESS VALIDATION" << endl;
+    cout << "====================================================" << endl;
     
-    int n = 1000000;
-    int iterations = 100;
-    int sampleSize = 10;
-
-    cout << "Preparing shared data for n = " << n << "..." << endl;
-
-    // 2. Generate test data globally only once before all tests
-    vector<vector<int>> shared_C(sampleSize, vector<int>(n));
-    mt19937 rng(42); 
-    for (int s = 0; s < sampleSize; ++s) {
-        for (int i = 0; i < n; ++i) {
-            uniform_int_distribution<int> dist(0, i);
-            shared_C[s][i] = dist(rng);
-        }
+    if (verify_logic(10000)) {
+        cout << "[SUCCESS] Both PP and MR algorithms passed round-trip tests." << endl;
+    } else {
+        cerr << "[FAILED] Logic error detected in algorithms!" << endl;
+        return 1;
     }
-    cout << "Data ready. Starting benchmarks." << endl << endl;
 
-    for (int round = 1; round <= 5; round++) {
-        printf("--- Round %d ---\n", round);
+    // 阶段 2: 性能对比测试
+    cout << "\n==================================================================" << endl;
+    cout << "PHASE 2: INDUSTRIAL BENCHMARK (Core-Locked Recommended)" << endl;
+    cout << "==================================================================" << endl;
+    cout << left << setw(10) << "N" << setw(12) << "Dist" 
+         << setw(15) << "MR (ns/it)" << setw(15) << "PP (ns/it)" << "Speedup" << endl;
+    cout << "------------------------------------------------------------------" << endl;
+
+    vector<int> sizes = {1000, 100000, 1000000};
+    vector<string> dists = {"Random", "Sorted", "Reverse"};
+
+    for (int n : sizes) {
+        // 动态调整迭代次数以平衡测试精度和时间
+        int its = (n <= 1000) ? 10000 : (n <= 100000 ? 500 : 50);
         
-        // Use identical shared_C for comparison without initialization overhead
-        runAlgorithmTest("MyrvoldRuskey", MyrvoldRuskey_unrank, shared_C, n, iterations);
-        runAlgorithmTest("PositionPure", PositionPure_unrank, shared_C, n, iterations);
+        for (const auto& d : dists) {
+            double t_mr = measure_speed(MR_unrank, n, its, d);
+            double t_pp = measure_speed(PositionPure_unrank, n, its, d);
+            double speedup = t_mr / t_pp;
+
+            cout << left << setw(10) << n 
+                 << setw(12) << d 
+                 << setw(15) << fixed << setprecision(1) << t_mr
+                 << setw(15) << fixed << setprecision(1) << t_pp
+                 << setprecision(2) << speedup << "x" << endl;
+        }
+        cout << "------------------------------------------------------------------" << endl;
     }
 
     return 0;
