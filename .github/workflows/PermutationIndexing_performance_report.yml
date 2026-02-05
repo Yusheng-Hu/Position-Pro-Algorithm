@@ -1,0 +1,54 @@
+name: Position Pure Performance Report
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  benchmark:
+    name: Run PP vs MR Benchmark
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y g++ build-essential
+
+      - name: Build and Run Rank Benchmark
+        working-directory: ./PermutationIndexing
+        run: |
+          # Compile with high optimization and native architecture support
+          g++ -O3 -march=native map_perm_algorithms.cpp map_algorithm_test.cpp -o benchmark_rank
+          
+          echo "## Position Pure (PP) Rank Performance Report" > rank_report.md
+          echo "Running on: $(lscpu | grep 'Model name' | cut -f 2 -d ":")" >> rank_report.md
+          echo "\`\`\`text" >> rank_report.md
+          ./benchmark_rank >> rank_report.md
+          echo "\`\`\`" >> rank_report.md
+
+      - name: Build and Run Unrank Benchmark
+        working-directory: ./PermutationIndexing
+        run: |
+          # Use sed to switch testing focus from Rank to Unrank without modifying source files
+          sed -i 's/measure_speed(MR_rank/measure_speed(MR_unrank/g' map_algorithm_test.cpp
+          sed -i 's/measure_speed(PositionPure_rank/measure_speed(PositionPure_unrank/g' map_algorithm_test.cpp
+          
+          g++ -O3 -march=native map_perm_algorithms.cpp map_algorithm_test.cpp -o benchmark_unrank
+          
+          echo "## Position Pure (PP) Unrank Performance Report" > unrank_report.md
+          echo "\`\`\`text" >> unrank_report.md
+          ./benchmark_unrank >> unrank_report.md
+          echo "\`\`\`" >> unrank_report.md
+
+      - name: Publish Performance Summary
+        run: |
+          cat ./PermutationIndexing/rank_report.md >> $GITHUB_STEP_SUMMARY
+          echo "---" >> $GITHUB_STEP_SUMMARY
+          cat ./Perm
