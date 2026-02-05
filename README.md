@@ -74,15 +74,13 @@ g++ -O3 -std=c++11 -march=native -flto -ffast-math -fomit-frame-pointer heap_per
 # Compile Position-Pure
 g++ -O3 -std=c++11 -march=native -flto -ffast-math -fomit-frame-pointer permpure_full.cpp -o pure_test -pthread
 
-
 [//]: # (UNIQUE_PP_ALGO_BENCHMARK_DATA_SECTION_START_DO_NOT_REMOVE)
 
-#### Last Automated Run: Thu Feb  5 04:37:46 UTC 2026 (UTC)
+#### Last Automated Run: Thu Feb  5 04:39:53 UTC 2026 (UTC)
 | N | Heap Algorithm (s) | PP Algorithm (s) | Speedup (Heap/PP) |
 |---|---|---|---|
-| 9 | 0.005833 | 0.001023 | 5.70x |
-| 10 | 0.058028 | 0.006959 | 8.33x |
-
+| 9 | 0.005767 | 0.000756 | 7.62x |
+| 10 | 0.058027 | 0.006987 | 8.30x |
 
 [//]: # (UNIQUE_PP_ALGO_BENCHMARK_DATA_SECTION_END_DO_NOT_REMOVE)
 
