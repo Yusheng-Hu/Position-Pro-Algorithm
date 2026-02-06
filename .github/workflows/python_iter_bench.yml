@@ -29,7 +29,6 @@ jobs:
       - name: Run Benchmark
         run: |
           cd python
-          # Run script and capture raw table output
           python pp_iter.py > raw_bench.log
 
       - name: Update README with CPU Detection
@@ -42,7 +41,7 @@ jobs:
           cpu_model = cpu_info.split(":")[1].strip()
           vendor = "AMD" if "AMD" in cpu_model.upper() else "INTEL"
           
-          # Match Markers in README.md
+          # Match Markers
           start_m = f"[//]: # (PYTHON_PP_ITER_BENCHMARK_{vendor}_START)"
           end_m = f"[//]: # (PYTHON_PP_ITER_BENCHMARK_{vendor}_END)"
           
@@ -51,24 +50,21 @@ jobs:
           now_bj = now_utc + datetime.timedelta(hours=8)
           time_str = f"{now_utc.strftime('%a %b %d %H:%M:%S %Y')} UTC / {now_bj.strftime('%a %b %d %H:%M:%S %Y')} (UTC+8)"
           
-          # Clean Data: Force remove leading spaces to fix Markdown table rendering
           with open("python/raw_bench.log", "r") as f:
-              lines = [line.strip() for line in f.readlines() if line.strip()]
-              clean_data = "\n".join(lines)
+              clean_data = "\n".join([l.strip() for l in f.readlines() if l.strip()])
           
-          header = f"**Last Run:** {time_str}\n**Environment:** {cpu_model} (GitHub Actions Runner)\n\n"
+          header = f"**Last Run:** {time_str}\n**Environment:** {cpu_model} (GitHub Actions Runner)"
           
           with open("README.md", "r", encoding="utf-8") as f:
               readme = f.read()
           
           if start_m in readme and end_m in readme:
-              prefix = readme.split(start_m)[0]
-              suffix = readme.split(end_m)[1]
-              updated = f"{prefix}{start_m}\n\n{header}{clean_data}\n\n{end_m}{suffix}"
+              prefix, suffix = readme.split(start_m)[0], readme.split(end_m)[1]
+              updated = f"{prefix}{start_m}\n\n{header}\n\n{clean_data}\n\n{end_m}{suffix}"
               with open("README.md", "w", encoding="utf-8") as f:
                   f.write(updated)
           else:
-              print(f"Error: Markers for {vendor} not found in README!")
+              print(f"Error: Markers for {vendor} not found!")
               sys.exit(1)
 
       - name: Synchronized Git Push

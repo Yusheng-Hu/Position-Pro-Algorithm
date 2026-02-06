@@ -1,4 +1,5 @@
 name: Industrial Indexing Performance Report
+
 on:
   push:
     branches: [ main ]
@@ -42,16 +43,22 @@ jobs:
         run: |
           import os, sys
           vendor = os.environ['VENDOR']
-          start = f"[//]: # (INDUSTRIAL_PERFORMANCE_BENCHMARK_DATA_SECTION_{vendor}_START)"
-          end = f"[//]: # (INDUSTRIAL_PERFORMANCE_BENCHMARK_DATA_SECTION_{vendor}_END)"
+          start_m = f"[//]: # (INDUSTRIAL_PERFORMANCE_BENCHMARK_DATA_SECTION_{vendor}_START)"
+          end_m = f"[//]: # (INDUSTRIAL_PERFORMANCE_BENCHMARK_DATA_SECTION_{vendor}_END)"
           
-          with open("PermutationIndexing/table.tmp", "r") as f: table = f.read().strip()
-          with open("README.md", "r", encoding="utf-8") as f: readme = f.read()
+          with open("PermutationIndexing/table.tmp", "r") as f:
+              table = "\n".join([l.strip() for l in f.readlines()])
           
-          if start in readme:
-              prefix, suffix = readme.split(start)[0], readme.split(end)[1]
+          with open("README.md", "r", encoding="utf-8") as f:
+              readme = f.read()
+          
+          if start_m in readme and end_m in readme:
+              prefix, suffix = readme.split(start_m)[0], readme.split(end_m)[1]
               with open("README.md", "w", encoding="utf-8") as f:
-                  f.write(f"{prefix}{start}\n\n{table}\n\n{end}{suffix}")
+                  f.write(f"{prefix}{start_m}\n\n{table}\n\n{end_m}{suffix}")
+          else:
+              print(f"Error: Markers for {vendor} not found!")
+              sys.exit(1)
 
       - name: Synchronized Push
         run: |
@@ -59,8 +66,11 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           for i in {1..5}; do
             git add README.md
-            git commit -m "docs: sync industrial indexing report [skip ci]" || exit 0
-            git pull --rebase origin main
-            if git push; then exit 0; fi
+            if git commit -m "docs: sync industrial indexing report [skip ci]"; then
+              git pull --rebase origin main
+              if git push; then exit 0; fi
+            else
+              exit 0
+            fi
             sleep 10
           done
