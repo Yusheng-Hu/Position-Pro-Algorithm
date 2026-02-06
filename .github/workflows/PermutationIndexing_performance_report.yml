@@ -1,9 +1,7 @@
 name: Industrial Indexing Performance Report
-
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
   workflow_dispatch:
 
 concurrency:
@@ -23,16 +21,16 @@ jobs:
           fetch-depth: 0
 
       - name: Run Benchmarks
-        # Set working directory to the sub-folder where source files exist
+        # Verified subdirectory for indexing source files
         working-directory: ./PermutationIndexing
         run: |
-          # 1. Hardware detection
+          # 1. Hardware detection logic
           CPU_RAW=$(grep -m 1 "model name" /proc/cpuinfo | cut -d: -f2 | xargs)
           if [[ "$CPU_RAW" == *"AMD"* ]]; then VENDOR="AMD"; else VENDOR="INTEL"; fi
           echo "VENDOR=$VENDOR" >> $GITHUB_ENV
           
-          # 2. Compilation without -flto to ensure smoother linking
-          # Using: -O3, -std=c++11, -march=native, -ffast-math, -fomit-frame-pointer
+          # 2. Compilation using high-performance flags (without -flto)
+          # Links both files to resolve 'undefined reference' errors
           g++ -O3 -std=c++11 -march=native -ffast-math -fomit-frame-pointer \
               map_algorithm_test.cpp map_perm_algorithms.cpp -o perf_test -pthread
           
@@ -40,15 +38,16 @@ jobs:
           T_UTC=$(date -u +"%a %b %d %H:%M:%S %Y UTC")
           T_BJ=$(TZ=Asia/Shanghai date +"%a %b %d %H:%M:%S %Y (UTC+8)")
           
-          # 4. Create result table
+          # 4. Initialize Markdown Table with correct alignment markers
           echo "**Last Run:** $T_UTC / $T_BJ" > table.tmp
           echo "**Environment:** $CPU_RAW (GitHub Actions Runner)" >> table.tmp
-          echo "" >> table.tmp
+          echo -e "\n| N | Dist | MR (ns/it) | PP (ns/it) | Speedup |" >> table.tmp
+          echo "|---|---|---|---|---|" >> table.tmp
           
-          # Execute the benchmark and capture output
+          # Execute benchmark and append data to the table
           ./perf_test >> table.tmp
           
-          # Copy to root directory for Python injection logic
+          # Move to root for Python injection step
           cp table.tmp ../table.tmp
 
       - name: Inject into README via Python
@@ -56,8 +55,8 @@ jobs:
         run: |
           import os, sys
           
+          # Get vendor-specific markers
           vendor = os.environ.get('VENDOR', 'INTEL')
-          # Matching labels in your README.md
           start_m = f"[//]: # (INDUSTRIAL_PERFORMANCE_BENCHMARK_DATA_SECTION_{vendor}_START)"
           end_m = f"[//]: # (INDUSTRIAL_PERFORMANCE_BENCHMARK_DATA_SECTION_{vendor}_END)"
           
@@ -66,23 +65,20 @@ jobs:
               sys.exit(1)
               
           with open("table.tmp", "r") as f:
-              # Remove leading/trailing whitespace from each line
+              # Ensure each line is clean for Markdown rendering
               table_data = "\n".join([line.strip() for line in f.readlines()])
           
           with open("README.md", "r", encoding="utf-8") as f:
-              readme_content = f.read()
+              readme = f.read()
           
-          if start_m in readme_content and end_m in readme_content:
-              print(f"Injecting data into {vendor} section...")
-              before = readme_content.split(start_m)[0]
-              after = readme_content.split(end_m)[1]
-              
-              # Rebuild README content
-              new_readme = f"{before}{start_m}\n\n{table_data}\n\n{end_m}{after}"
+          if start_m in readme and end_m in readme:
+              print(f"Injecting benchmark data for {vendor}...")
+              prefix, suffix = readme.split(start_m)[0], readme.split(end_m)[1]
+              new_readme = f"{prefix}{start_m}\n\n{table_data}\n\n{end_m}{suffix}"
               with open("README.md", "w", encoding="utf-8") as f:
                   f.write(new_readme)
           else:
-              print(f"Error: Markers for {vendor} not found in README.md")
+              print(f"Error: Markers for {vendor} not found in README.md!")
               sys.exit(1)
 
       - name: Synchronized Git Push
@@ -90,14 +86,13 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           
-          # Retry loop to handle concurrent pushes to main branch
           for i in {1..5}; do
             git add README.md
-            if git commit -m "docs: sync industrial indexing benchmarks [skip ci]"; then
+            if git commit -m "docs: sync industrial indexing report [skip ci]"; then
               git pull --rebase origin main
               if git push; then exit 0; fi
             else
-              echo "No changes to commit."
+              echo "No changes to commit"
               exit 0
             fi
             sleep 10
