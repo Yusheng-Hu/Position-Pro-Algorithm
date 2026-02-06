@@ -5,7 +5,6 @@ on:
     branches: [ "main" ]
   workflow_dispatch:
 
-# Queue workflows to prevent Git race conditions (Exit Code 128)
 concurrency:
   group: global-readme-sync
   cancel-in-progress: false
@@ -27,35 +26,42 @@ jobs:
       with:
         python-version: 'pypy-3.10'
 
-    - name: Run Benchmark and Build Report
+    - name: Run and Debug Benchmark
       run: |
         cd python
-        # 1. Capture Environment Info in Shell
+        # 1. Capture Raw Output
+        python pp_iter.py > raw_output.log
+        
+        # 2. Extract Env Info
         CPU_MODEL=$(grep -m 1 "model name" /proc/cpuinfo | cut -d: -f2 | sed 's/^[ \t]*//')
         TIME_UTC=$(date -u +"%a %b %d %H:%M:%S %Y UTC")
         TIME_BJ=$(TZ=Asia/Shanghai date +"%a %b %d %H:%M:%S %Y (UTC+8)")
         
-        # 2. Directly use the perfect Markdown output from your script
-        echo "#### Last Automated Run: $TIME_UTC / $TIME_BJ" > bench_final.md
-        echo "**Environment: $CPU_MODEL (GitHub Actions Runner)**" >> bench_final.md
-        echo "" >> bench_final.md
+        # 3. Build a "Debug Report"
+        echo "#### Last Automated Run: $TIME_UTC / $TIME_BJ" > debug_report.md
+        echo "**Environment: $CPU_MODEL**" >> debug_report.md
+        echo "" >> debug_report.md
         
-        # Run your script and append its pre-formatted table
-        python pp_iter.py >> bench_final.md
+        echo "#### [DEBUG] Raw Script Output:" >> debug_report.md
+        echo '```text' >> debug_report.md
+        cat raw_output.log >> debug_report.md
+        echo '```' >> debug_report.md
         
-        # Preview in Action Summary
-        cat bench_final.md >> $GITHUB_STEP_SUMMARY
+        echo "#### [DEBUG] Final Injected Table:" >> debug_report.md
+        # Just use the raw output directly since pp_iter.py already outputs a table
+        cat raw_output.log >> debug_report.md
+        
+        cat debug_report.md >> $GITHUB_STEP_SUMMARY
 
-    - name: Inject into README.md
+    - name: Inject Debug Info into README.md
       shell: python
       run: |
         import os, sys
         start_m = "[//]: # (PYTHON_PP_ITER_BENCHMARK_START)"
         end_m = "[//]: # (PYTHON_PP_ITER_BENCHMARK_END)"
 
-        # Read the pre-formatted report
-        with open("python/bench_final.md", "r", encoding="utf-8") as f:
-            new_content = f.read().strip()
+        with open("python/debug_report.md", "r", encoding="utf-8") as f:
+            debug_content = f.read().strip()
         with open("README.md", "r", encoding="utf-8") as f:
             readme = f.read()
 
@@ -63,14 +69,14 @@ jobs:
             prefix = readme.split(start_m)[0]
             suffix = readme.split(end_m)[1]
             
-            # Combine Title + the pre-formatted table content
-            updated_section = f"### 🐍 Position Pure Iterator Performance (PyPy)\n\n{new_content}"
-            updated_readme = f"{prefix}{start_m}\n\n{updated_section}\n\n{end_m}{suffix}"
+            # Temporary content with debug logs to find the root cause
+            final_content = f"### 🐍 Debug Mode: Python Iter Performance\n\n{debug_content}"
+            updated = f"{prefix}{start_m}\n\n{final_content}\n\n{end_m}{suffix}"
             
             with open("README.md", "w", encoding="utf-8") as f:
-                f.write(updated_readme)
+                f.write(updated)
         else:
-            print("Markers not found!")
+            print("Markers missing!")
             sys.exit(1)
 
     - name: Synchronized Git Push
@@ -80,11 +86,10 @@ jobs:
         
         for i in {1..5}; do
           git add README.md
-          if git commit -m "docs: sync python benchmark via native table output [skip ci]"; then
+          if git commit -m "docs: debug python benchmark output [skip ci]"; then
             git pull --rebase origin main
             if git push; then exit 0; fi
           else
-            echo "Nothing to commit"
             exit 0
           fi
           sleep 5
