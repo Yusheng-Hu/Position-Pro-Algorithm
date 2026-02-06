@@ -1,8 +1,7 @@
 name: Industrial Indexing Performance Report
-
 on:
   push:
-    branches: [ "main" ]
+    branches: [ main ]
   workflow_dispatch:
 
 concurrency:
@@ -16,7 +15,7 @@ jobs:
   indexing-bench:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -24,57 +23,44 @@ jobs:
       - name: Run Benchmarks
         working-directory: ./PermutationIndexing
         run: |
-          # 1. Detect CPU and Time
           CPU_RAW=$(grep -m 1 "model name" /proc/cpuinfo | cut -d: -f2 | xargs)
           if [[ "$CPU_RAW" == *"AMD"* ]]; then VENDOR="AMD"; else VENDOR="INTEL"; fi
           echo "VENDOR=$VENDOR" >> $GITHUB_ENV
           
-          TIME_UTC=$(date -u +"%a %b %d %H:%M:%S %Y UTC")
-          TIME_BJ=$(TZ=Asia/Shanghai date +"%a %b %d %H:%M:%S %Y (UTC+8)")
+          T_UTC=$(date -u +"%a %b %d %H:%M:%S %Y UTC")
+          T_BJ=$(TZ=Asia/Shanghai date +"%a %b %d %H:%M:%S %Y (UTC+8)")
           
-          # 2. Compile and Run
           g++ -O3 -march=native performance.cpp -o perf_test -pthread
           
-          # 3. Create formatted output
-          echo "**Last Run:** $TIME_UTC / $TIME_BJ" > table.tmp
+          echo "**Last Run:** $T_UTC / $T_BJ" > table.tmp
           echo "**Environment:** $CPU_RAW (GitHub Actions Runner)" >> table.tmp
           echo "" >> table.tmp
           ./perf_test >> table.tmp
 
-      - name: Inject into README.md via Python
+      - name: Inject into README via Python
         shell: python
         run: |
           import os, sys
           vendor = os.environ['VENDOR']
-          # Exact match for your new markers
           start = f"[//]: # (INDUSTRIAL_PERFORMANCE_BENCHMARK_DATA_SECTION_{vendor}_START)"
           end = f"[//]: # (INDUSTRIAL_PERFORMANCE_BENCHMARK_DATA_SECTION_{vendor}_END)"
           
-          with open("PermutationIndexing/table.tmp", "r") as f: table_content = f.read().strip()
+          with open("PermutationIndexing/table.tmp", "r") as f: table = f.read().strip()
           with open("README.md", "r", encoding="utf-8") as f: readme = f.read()
           
-          if start in readme and end in readme:
-              prefix = readme.split(start)[0]
-              suffix = readme.split(end)[1]
-              new_readme = f"{prefix}{start}\n\n{table_content}\n\n{end}{suffix}"
-              with open("README.md", "w", encoding="utf-8") as f: f.write(new_readme)
-              print(f"Successfully injected data for {vendor}")
-          else:
-              print(f"Error: Marker {start} not found in README!")
-              sys.exit(1)
+          if start in readme:
+              prefix, suffix = readme.split(start)[0], readme.split(end)[1]
+              with open("README.md", "w", encoding="utf-8") as f:
+                  f.write(f"{prefix}{start}\n\n{table}\n\n{end}{suffix}")
 
-      - name: Synchronized Git Push
+      - name: Synchronized Push
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           for i in {1..5}; do
             git add README.md
-            if git commit -m "docs: sync industrial report ($VENDOR) [skip ci]"; then
-              git pull --rebase origin main
-              if git push; then exit 0; fi
-            else
-              echo "No changes to commit"
-              exit 0
-            fi
+            git commit -m "docs: sync industrial indexing report [skip ci]" || exit 0
+            git pull --rebase origin main
+            if git push; then exit 0; fi
             sleep 10
           done
