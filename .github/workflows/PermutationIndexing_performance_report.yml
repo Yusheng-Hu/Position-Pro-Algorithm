@@ -14,25 +14,23 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: Checkout Repository
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Run Ranking/Unranking Benchmarks
+      - name: Run Benchmarks
         working-directory: ./PermutationIndexing
         run: |
-          # Detect Hardware and Dual Timezone
           CPU=$(grep -m 1 "model name" /proc/cpuinfo | cut -d: -f2 | xargs)
           T_UTC=$(date -u +"%a %b %d %H:%M:%S %Y UTC")
           T_BJ=$(TZ=Asia/Shanghai date +"%a %b %d %H:%M:%S %Y (UTC+8)")
           echo "#### Last Run: $T_UTC / $T_BJ" > table.tmp
           echo "**Env: $CPU**" >> table.tmp
-          # ... (Keep your g++ and awk logic here)
+          # ... (Compile and execution logic here)
 
-      - name: Inject via Perl and Sync Push
+      - name: Inject and Synchronized Push
         run: |
-          # Use the environment variable to pass data safely
           export NEW_TABLE=$(cat PermutationIndexing/table.tmp)
           perl -i -0777 -pe 's/\[\/\/\]: # \(INDUSTRIAL_PERFORMANCE_BENCHMARK_DATA_SECTION_START_DO_NOT_REMOVE\).*?\[\/\/\]: # \(INDUSTRIAL_PERFORMANCE_BENCHMARK_DATA_SECTION_END_DO_NOT_REMOVE\)/\[\/\/\]: # (INDUSTRIAL_PERFORMANCE_BENCHMARK_DATA_SECTION_START_DO_NOT_REMOVE)\n\n$ENV{NEW_TABLE}\n\n\[\/\/\]: # (INDUSTRIAL_PERFORMANCE_BENCHMARK_DATA_SECTION_END_DO_NOT_REMOVE)/s;' README.md
           
@@ -40,7 +38,7 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           for i in {1..5}; do
             git add README.md
-            git commit -m "docs: update industrial report [skip ci]" || break
+            git commit -m "docs: sync industrial report [skip ci]" || exit 0
             git pull --rebase origin main
             if git push; then exit 0; fi
             sleep 5

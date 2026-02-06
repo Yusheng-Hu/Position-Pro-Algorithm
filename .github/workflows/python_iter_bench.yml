@@ -15,17 +15,17 @@ jobs:
   python-bench:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repository
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Run PyPy Benchmark
+      - name: Run PyPy
         run: |
           cd python
           python3 pp_iter.py > bench_output.md
 
-      - name: Update README via Python
+      - name: Update README
         shell: python
         run: |
           import sys, datetime
@@ -38,7 +38,7 @@ jobs:
           if start in readme:
               header = f"### 🐍 Position Pure Iterator Performance (PyPy)\n\n#### Last Run: {time_str}\n"
               new_readme = readme.split(start)[0] + start + "\n\n" + header + data + "\n\n" + end + readme.split(end)[-1]
-              with open("README.md", "w") as f: f.write(new_readme)
+              open("README.md", "w").write(new_readme)
 
       - name: Synchronized Push
         run: |
@@ -46,7 +46,7 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           for i in {1..5}; do
             git add README.md
-            git commit -m "docs: update python benchmarks [skip ci]" || break
+            git commit -m "docs: sync python benchmarks [skip ci]" || exit 0
             git pull --rebase origin main
             if git push; then exit 0; fi
             sleep 5
