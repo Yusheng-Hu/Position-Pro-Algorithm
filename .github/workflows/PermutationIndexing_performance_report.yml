@@ -22,68 +22,84 @@ jobs:
           fetch-depth: 0
 
       - name: Run Benchmarks
-        # 保持在子目录编译运行
+        # Execute in the specific subdirectory
         working-directory: ./PermutationIndexing
         run: |
+          # Hardware detection logic
           CPU_RAW=$(grep -m 1 "model name" /proc/cpuinfo | cut -d: -f2 | xargs)
           if [[ "$CPU_RAW" == *"AMD"* ]]; then VENDOR="AMD"; else VENDOR="INTEL"; fi
           echo "VENDOR=$VENDOR" >> $GITHUB_ENV
           
+          # Generate timestamps for both UTC and UTC+8
           T_UTC=$(date -u +"%a %b %d %H:%M:%S %Y UTC")
           T_BJ=$(TZ=Asia/Shanghai date +"%a %b %d %H:%M:%S %Y (UTC+8)")
           
+          # Compile the performance test
           g++ -O3 -march=native performance.cpp -o perf_test -pthread
           
+          # Initializing the temporary result file
           echo "**Last Run:** $T_UTC / $T_BJ" > table.tmp
           echo "**Environment:** $CPU_RAW (GitHub Actions Runner)" >> table.tmp
           echo "" >> table.tmp
           ./perf_test >> table.tmp
           
-          # 将结果移动到根目录，方便下一步 Python 读取
+          # Move the result to the root directory for Python access
           cp table.tmp ../table.tmp
 
       - name: Inject into README via Python
         shell: python
         run: |
           import os, sys
+          
+          # Get vendor from environment variable, default to INTEL
           vendor = os.environ.get('VENDOR', 'INTEL')
           start_m = f"[//]: # (INDUSTRIAL_PERFORMANCE_BENCHMARK_DATA_SECTION_{vendor}_START)"
           end_m = f"[//]: # (INDUSTRIAL_PERFORMANCE_BENCHMARK_DATA_SECTION_{vendor}_END)"
           
-          # 检查临时文件是否存在
+          # Validate if the temporary data file exists
           if not os.path.exists("table.tmp"):
-              print("Error: table.tmp not found!")
+              print("Error: table.tmp not found in root directory!")
               sys.exit(1)
               
+          # Clean and read benchmark data
           with open("table.tmp", "r") as f:
-              table = "\n".join([l.strip() for l in f.readlines()])
+              table = "\n".join([line.strip() for line in f.readlines()])
           
+          # Read the README file
           with open("README.md", "r", encoding="utf-8") as f:
               readme = f.read()
           
+          # Precision injection logic
           if start_m in readme and end_m in readme:
-              print(f"Found markers for {vendor}. Injecting...")
+              print(f"Target markers for {vendor} found. Updating content...")
               prefix, suffix = readme.split(start_m)[0], readme.split(end_m)[1]
-              new_content = f"{prefix}{start_m}\n\n{table}\n\n{end_m}{suffix}"
+              new_readme = f"{prefix}{start_m}\n\n{table}\n\n{end_m}{suffix}"
+              
               with open("README.md", "w", encoding="utf-8") as f:
-                  f.write(new_content)
+                  f.write(new_readme)
           else:
-              print(f"Error: Could not find markers: {start_m}")
-              # 打印 README 的前几行用于调试
+              print(f"Critical Error: Required markers not found for {vendor}!")
+              print(f"Looked for: {start_m}")
               sys.exit(1)
 
-      - name: Synchronized Push
+      - name: Synchronized Git Push
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Retry loop to handle concurrent push conflicts
           for i in {1..5}; do
             git add README.md
             if git commit -m "docs: sync industrial indexing report [skip ci]"; then
               git pull --rebase origin main
-              if git push; then exit 0; fi
+              if git push; then 
+                echo "Successfully pushed updates."
+                exit 0
+              fi
             else
-              echo "No changes to commit"
+              echo "No changes detected. Skipping push."
               exit 0
             fi
+            echo "Conflict detected or push failed. Retrying in 10 seconds..."
             sleep 10
           done
