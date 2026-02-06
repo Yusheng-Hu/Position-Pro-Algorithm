@@ -68,13 +68,23 @@ At the request of Reddit users and other community members, a performance compar
 
 [//]: # (PYTHON_PP_ITER_BENCHMARK_START)
 
-### 🐍 Position Pure Iterator Performance (PyPy)
+### 🐍 Debug Mode: Python Iter Performance
 
-#### Last Automated Run: Fri Feb 06 04:43:06 2026 UTC / Fri Feb 06 12:43:06 2026 (UTC+8)
+#### Last Automated Run: Fri Feb 06 04:48:08 2026 UTC / Fri Feb 06 12:48:08 2026 (UTC+8)
 **Environment: AMD EPYC 7763 64-Core Processor**
 
+#### [DEBUG] Raw Script Output:
+```text
 | N | Total Permutations | Itertools (s) | Position Pure (s) | Speed-up |
-|---|---|---|---|---|
+| :--- | :--- | :--- | :--- | :--- |
+| 10 | 3,628,800 | 0.1082s | 0.0671s | **1.61x** |
+| 11 | 39,916,800 | 1.2237s | 0.5743s | **2.13x** |
+```
+#### [DEBUG] Final Injected Table:
+| N | Total Permutations | Itertools (s) | Position Pure (s) | Speed-up |
+| :--- | :--- | :--- | :--- | :--- |
+| 10 | 3,628,800 | 0.1082s | 0.0671s | **1.61x** |
+| 11 | 39,916,800 | 1.2237s | 0.5743s | **2.13x** |
 
 [//]: # (PYTHON_PP_ITER_BENCHMARK_END)
 
