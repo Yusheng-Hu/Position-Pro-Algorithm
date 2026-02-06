@@ -45,19 +45,17 @@ The **PositionPure** algorithm is a high-performance, iterative approach to gene
 * **Hardware Affinity Binding**: Includes native Windows API support (`SetThreadAffinityMask`) to lock execution to a specific logical core, minimizing context-switching noise and cache misses.
 * **High-Precision Benchmarking**: Performance is measured using the Windows High-Precision Event Timer (`QueryPerformanceCounter`) for nanosecond-level accuracy.
 
-
 [//]: # (UNIQUE_PP_ALGO_BENCHMARK_DATA_SECTION_START_DO_NOT_REMOVE)
 
-#### Last Automated Run: Thu Feb  5 16:09:38 UTC 2026 (UTC)
+#### Last Automated Run: Fri Feb 06 03:13:37 2026 UTC / Fri Feb 06 11:13:37 2026 (UTC+8)
+**Environment: AMD EPYC 7763 64-Core Processor (GitHub Actions Runner)**
 
 | N | Heap Algorithm (s) | PP Algorithm (s) | Speedup (Heap/PP) |
 |---|---|---|---|
-| 9 | 0.005711 | 0.000772 | 7.39x |
-| 10 | 0.058082 | 0.007243 | 8.01x |
-| 11 | 0.645846 | 0.074225 | 8.70x |
-| 12 | 7.835578 | 0.825453 | 9.49x |
-| 13 | 103.602181 | 10.546899 | 9.82x |
-| 14 | 1446.415502 | 142.643972 | 10.14x |
+| 9 | 0.005773 | 0.001026 | 5.62x |
+| 10 | 0.058102 | 0.007200 | 8.06x |
+| 11 | 0.646756 | 0.073909 | 8.75x |
+| 12 | 7.845010 | 0.819478 | 9.57x |
 
 [//]: # (UNIQUE_PP_ALGO_BENCHMARK_DATA_SECTION_END_DO_NOT_REMOVE)
 
