@@ -1,8 +1,8 @@
 name: Full Permutation Benchmark
 
 on:
-  push:
-    branches: [ "main" ]
+  # push:
+  #  branches: [ "main" ]
   workflow_dispatch:
 
 concurrency:
@@ -92,3 +92,4 @@ jobs:
             sleep 5
 
           done
+
