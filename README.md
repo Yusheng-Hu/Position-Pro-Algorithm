@@ -111,20 +111,20 @@ At the request of Reddit users and other community members, a performance compar
 
 [//]: # (INDUSTRIAL_PERFORMANCE_BENCHMARK_DATA_SECTION_AMD_START)
 
-**Last Run:** Fri Feb 06 06:03:13 2026 UTC / Fri Feb 06 14:03:13 2026 (UTC+8)
+**Last Run:** Fri Feb 06 06:06:40 2026 UTC / Fri Feb 06 14:06:40 2026 (UTC+8)
 **Environment:** AMD EPYC 7763 64-Core Processor (GitHub Actions Runner)
 
 | N | Dist | MR (ns/it) | PP (ns/it) | Speedup |
 |---|---|---|---|---|
-| 1000 | Random | 786.6 | 695.1 | 1.13x |
-| 1000 | Sorted | 807.7 | 802.6 | 1.01x |
-| 1000 | Reverse | 773.7 | 675.0 | 1.15x |
-| 100000 | Random | 116901.7 | 89320.0 | 1.31x |
-| 100000 | Sorted | 67865.7 | 63038.2 | 1.08x |
-| 100000 | Reverse | 79792.7 | 66620.7 | 1.20x |
-| 1000000 | Random | 1565799.0 | 1178875.4 | 1.33x |
-| 1000000 | Sorted | 708064.4 | 625778.3 | 1.13x |
-| 1000000 | Reverse | 856334.0 | 686117.5 | 1.25x |
+| 1000 | Random | 747.3 | 633.1 | 1.18x |
+| 1000 | Sorted | 682.7 | 630.9 | 1.08x |
+| 1000 | Reverse | 739.7 | 627.4 | 1.18x |
+| 100000 | Random | 114430.4 | 93796.9 | 1.22x |
+| 100000 | Sorted | 67756.7 | 62518.8 | 1.08x |
+| 100000 | Reverse | 81138.5 | 66540.3 | 1.22x |
+| 1000000 | Random | 1559884.2 | 1205524.0 | 1.29x |
+| 1000000 | Sorted | 714302.8 | 626319.4 | 1.14x |
+| 1000000 | Reverse | 841692.5 | 667098.0 | 1.26x |
 
 [//]: # (INDUSTRIAL_PERFORMANCE_BENCHMARK_DATA_SECTION_AMD_END)
 
