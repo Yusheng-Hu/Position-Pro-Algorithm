@@ -110,6 +110,35 @@ At the request of Reddit users and other community members, a performance compar
 ## 🚀 Liner rank unrank: Position Pure (PP) vs. Myrvold-Ruskey (MR) 
 
 [//]: # (INDUSTRIAL_PERFORMANCE_BENCHMARK_DATA_SECTION_AMD_START)
+
+**Last Run:** Fri Feb 06 05:58:27 2026 UTC / Fri Feb 06 13:58:27 2026 (UTC+8)
+**Environment:** AMD EPYC 7763 64-Core Processor (GitHub Actions Runner)
+
+| N | Dist | MR (ns/it) | PP (ns/it) | Speedup |
+|---|---|---|---|---|
+====================================================
+PHASE 1: CORRECTNESS VALIDATION
+====================================================
+[SUCCESS] Both PP and MR algorithms passed round-trip tests.
+
+==================================================================
+PHASE 2: INDUSTRIAL BENCHMARK (Core-Locked Recommended)
+==================================================================
+N         Dist        MR (ns/it)     PP (ns/it)     Speedup
+------------------------------------------------------------------
+1000      Random      758.8          637.7          1.19x
+1000      Sorted      677.3          629.0          1.08x
+1000      Reverse     742.9          680.0          1.09x
+------------------------------------------------------------------
+100000    Random      117804.4       94369.0        1.25x
+100000    Sorted      67518.9        62492.1        1.08x
+100000    Reverse     81228.1        66590.9        1.22x
+------------------------------------------------------------------
+1000000   Random      1538090.4      1207551.4      1.27x
+1000000   Sorted      707705.2       627248.5       1.13x
+1000000   Reverse     835394.9       673274.4       1.24x
+------------------------------------------------------------------
+
 [//]: # (INDUSTRIAL_PERFORMANCE_BENCHMARK_DATA_SECTION_AMD_END)
 
 [//]: # (INDUSTRIAL_PERFORMANCE_BENCHMARK_DATA_SECTION_INTEL_START)
