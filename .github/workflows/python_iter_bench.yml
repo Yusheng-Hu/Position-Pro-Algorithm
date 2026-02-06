@@ -1,54 +1,83 @@
-- name: Update Root README.md
+name: Python Iter Performance Bench
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+concurrency:
+  group: python-bench-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  python-bench:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up PyPy 3.10
+      uses: actions/setup-python@v5
+      with:
+        python-version: 'pypy-3.10'
+
+    - name: Run PP Iter Benchmark
+      run: |
+        # Run the benchmark script and capture output
+        cd python
+        python pp_iter.py > bench_output.md
+        cat bench_output.md >> $GITHUB_STEP_SUMMARY
+
+    - name: Update Root README.md
       shell: python
       run: |
         import os
         import sys
         import datetime
+        import subprocess
 
-        # Markers for the Python benchmark section in the root README
+        # Define boundary markers in README
         start_marker = "[//]: # (PYTHON_PP_ITER_BENCHMARK_START)"
         end_marker = "[//]: # (PYTHON_PP_ITER_BENCHMARK_END)"
 
-        # Time Calculations
-        now_utc = datetime.datetime.now(datetime.timezone.utc)
-        # Calculate UTC+8 (China Standard Time)
-        now_beijing = now_utc + datetime.timedelta(hours=8)
-        
-        format_str = "%a %b %d %H:%M:%S %Y"
-        time_display = f"{now_utc.strftime(format_str)} UTC / {now_beijing.strftime(format_str)} (UTC+8)"
-        
-        env_info = "GitHub Actions (ubuntu-latest)"
+        # Fetch CPU model and generate dual timezone timestamps
+        try:
+            cpu_info = subprocess.check_output("grep -m 1 'model name' /proc/cpuinfo", shell=True).decode().split(":")[1].strip()
+        except:
+            cpu_info = "GitHub Actions Runner"
 
-        # Load the new benchmark results
+        now_utc = datetime.datetime.now(datetime.timezone.utc)
+        now_beijing = now_utc + datetime.timedelta(hours=8)
+        time_fmt = "%a %b %d %H:%M:%S %Y"
+        time_str = f"{now_utc.strftime(time_fmt)} UTC / {now_beijing.strftime(time_fmt)} (UTC+8)"
+
+        # Load data and perform injection
         try:
             with open("python/bench_output.md", "r", encoding="utf-8") as f:
                 new_data = f.read().strip()
-            
             with open("README.md", "r", encoding="utf-8") as f:
-                readme_content = f.read()
-        except FileNotFoundError as e:
-            print(f"Error: Required file missing - {e}")
+                readme = f.read()
+        except FileNotFoundError:
             sys.exit(1)
 
-        if start_marker in readme_content and end_marker in readme_content:
-            parts_before = readme_content.split(start_marker)[0].strip()
-            parts_after = readme_content.split(end_marker)[-1].strip()
+        if start_marker in readme and end_marker in readme:
+            prefix = readme.split(start_marker)[0].strip()
+            suffix = readme.split(end_marker)[-1].strip()
             
-            # Reassemble with both timezones
-            updated_content = (
-                parts_before + "\n\n" + 
-                start_marker + "\n\n" + 
-                "### 🐍 Position Pure Iterator Performance (PyPy)\n\n" +
-                f"#### Last Automated Run: {time_display}\n" +
-                f"**Environment: {env_info}**\n\n" +
-                new_data + "\n\n" + 
-                end_marker + "\n\n" + 
-                parts_after + "\n"
+            # Construct the new section with environment and timestamp
+            content = (
+                f"### 🐍 Position Pure Iterator Performance (PyPy)\n\n"
+                f"#### Last Automated Run: {time_str}\n"
+                f"**Environment: {cpu_info}**\n\n"
+                f"{new_data}"
             )
             
             with open("README.md", "w", encoding="utf-8") as f:
-                f.write(updated_content)
-            print(f"README.md updated. Time: {time_display}")
-        else:
-            print("Error: Python benchmark markers not found.")
-            sys.exit(1)
+                f.write(f"{prefix}\n\n{start_marker}\n\n{content}\n\n{end_marker}\n\n{suffix}\n")
