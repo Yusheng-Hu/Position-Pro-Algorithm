@@ -95,6 +95,15 @@ At the request of Reddit users and other community members, a performance compar
 [//]: # (PYTHON_PP_ITER_BENCHMARK_AMD_END)
 
 [//]: # (PYTHON_PP_ITER_BENCHMARK_INTEL_START)
+
+**Last Run:** Fri Feb 06 05:40:44 2026 UTC / Fri Feb 06 13:40:44 2026 (UTC+8)
+**Environment:** Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz (GitHub Actions Runner)
+
+| N | Total Permutations | Itertools (s) | Position Pure (s) | Speed-up |
+| :--- | :--- | :--- | :--- | :--- |
+| 10 | 3,628,800 | 0.1513s | 0.1334s | **1.13x** |
+| 11 | 39,916,800 | 2.0003s | 1.0969s | **1.82x** |
+
 [//]: # (PYTHON_PP_ITER_BENCHMARK_INTEL_END)
 
 
