@@ -4,9 +4,9 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
-# Shared concurrency group forces a single-file queue for README updates
+# Force all workflows to wait in a single queue to prevent race conditions
 concurrency:
-  group: readme-sync-group
+  group: global-readme-sync
   cancel-in-progress: false
 
 permissions:
@@ -16,12 +16,12 @@ jobs:
   benchmark:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Necessary for rebase
+          fetch-depth: 0 # Full history is required for successful rebasing
 
-      - name: Build and Run
+      - name: Compile and Run
         run: |
           cd FullPermutation
           g++ -O3 -march=native permpure_full.cpp -o pure_test -pthread
@@ -39,7 +39,7 @@ jobs:
             echo "| $n | $H | $P | ${S}x |" >> results.md
           done
 
-      - name: Inject via Python
+      - name: Update README via Python
         shell: python
         run: |
           import sys
@@ -56,7 +56,8 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           for i in {1..5}; do
             git add README.md
-            git commit -m "docs: sync full benchmarks [skip ci]" || exit 0
+            # Commit first to clean the index, preventing 'index contains uncommitted changes' error
+            git commit -m "docs: sync benchmarks [skip ci]" || exit 0
             git pull --rebase origin main
             if git push; then exit 0; fi
             sleep 5

@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: readme-sync-group
+  group: global-readme-sync
   cancel-in-progress: false
 
 jobs:
@@ -27,9 +27,9 @@ jobs:
           T_BJ=$(TZ=Asia/Shanghai date +"%a %b %d %H:%M:%S %Y (UTC+8)")
           echo "#### Last Run: $T_UTC / $T_BJ" > table.tmp
           echo "**Env: $CPU**" >> table.tmp
-          # ... (Compile and execution logic here)
+          # (Keep your g++ compile and run logic here)
 
-      - name: Inject and Synchronized Push
+      - name: Inject and Push
         run: |
           export NEW_TABLE=$(cat PermutationIndexing/table.tmp)
           perl -i -0777 -pe 's/\[\/\/\]: # \(INDUSTRIAL_PERFORMANCE_BENCHMARK_DATA_SECTION_START_DO_NOT_REMOVE\).*?\[\/\/\]: # \(INDUSTRIAL_PERFORMANCE_BENCHMARK_DATA_SECTION_END_DO_NOT_REMOVE\)/\[\/\/\]: # (INDUSTRIAL_PERFORMANCE_BENCHMARK_DATA_SECTION_START_DO_NOT_REMOVE)\n\n$ENV{NEW_TABLE}\n\n\[\/\/\]: # (INDUSTRIAL_PERFORMANCE_BENCHMARK_DATA_SECTION_END_DO_NOT_REMOVE)/s;' README.md

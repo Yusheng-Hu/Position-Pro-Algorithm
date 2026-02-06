@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: readme-sync-group
+  group: global-readme-sync
   cancel-in-progress: false
 
 permissions:
@@ -25,10 +25,11 @@ jobs:
           cd python
           python3 pp_iter.py > bench_output.md
 
-      - name: Update README
+      - name: Update and Push
         shell: python
         run: |
-          import sys, datetime
+          import os, datetime, subprocess
+          # 1. Update README content
           start, end = "[//]: # (PYTHON_PP_ITER_BENCHMARK_START)", "[//]: # (PYTHON_PP_ITER_BENCHMARK_END)"
           now_utc = datetime.datetime.now(datetime.timezone.utc)
           now_bj = now_utc + datetime.timedelta(hours=8)
@@ -39,15 +40,16 @@ jobs:
               header = f"### 🐍 Position Pure Iterator Performance (PyPy)\n\n#### Last Run: {time_str}\n"
               new_readme = readme.split(start)[0] + start + "\n\n" + header + data + "\n\n" + end + readme.split(end)[-1]
               open("README.md", "w").write(new_readme)
-
-      - name: Synchronized Push
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          for i in {1..5}; do
-            git add README.md
-            git commit -m "docs: sync python benchmarks [skip ci]" || exit 0
-            git pull --rebase origin main
-            if git push; then exit 0; fi
-            sleep 5
-          done
+          
+          # 2. Synchronized Git Push using subprocess to handle retries and rebase
+          import subprocess, time
+          subprocess.run(["git", "config", "--global", "user.name", "github-actions[bot]"])
+          subprocess.run(["git", "config", "--global", "user.email", "github-actions[bot]@users.noreply.github.com"])
+          for i in range(5):
+              subprocess.run(["git", "add", "README.md"])
+              if subprocess.run(["git", "commit", "-m", "docs: sync python benchmarks [skip ci]"]).returncode != 0:
+                  break # No changes to commit
+              subprocess.run(["git", "pull", "--rebase", "origin", "main"])
+              if subprocess.run(["git", "push"]).returncode == 0:
+                  sys.exit(0)
+              time.sleep(5)
