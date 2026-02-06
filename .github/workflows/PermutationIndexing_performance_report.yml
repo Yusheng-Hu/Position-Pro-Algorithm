@@ -23,7 +23,7 @@ jobs:
           fetch-depth: 0
 
       - name: Run Benchmarks
-        # Verified subdirectory from your previous screenshot
+        # Set working directory to the sub-folder where source files exist
         working-directory: ./PermutationIndexing
         run: |
           # 1. Hardware detection
@@ -31,21 +31,24 @@ jobs:
           if [[ "$CPU_RAW" == *"AMD"* ]]; then VENDOR="AMD"; else VENDOR="INTEL"; fi
           echo "VENDOR=$VENDOR" >> $GITHUB_ENV
           
-          # 2. Performance-oriented compilation
-          # Using your specific flags: -flto -ffast-math -fomit-frame-pointer
-          g++ -O3 -std=c++11 -march=native -flto -ffast-math -fomit-frame-pointer \
-              map_algorithm_test.cpp -o perf_test -pthread
+          # 2. Compilation without -flto to ensure smoother linking
+          # Using: -O3, -std=c++11, -march=native, -ffast-math, -fomit-frame-pointer
+          g++ -O3 -std=c++11 -march=native -ffast-math -fomit-frame-pointer \
+              map_algorithm_test.cpp map_perm_algorithms.cpp -o perf_test -pthread
           
-          # 3. Execution and data formatting
+          # 3. Generate Timestamps
           T_UTC=$(date -u +"%a %b %d %H:%M:%S %Y UTC")
           T_BJ=$(TZ=Asia/Shanghai date +"%a %b %d %H:%M:%S %Y (UTC+8)")
           
+          # 4. Create result table
           echo "**Last Run:** $T_UTC / $T_BJ" > table.tmp
           echo "**Environment:** $CPU_RAW (GitHub Actions Runner)" >> table.tmp
           echo "" >> table.tmp
+          
+          # Execute the benchmark and capture output
           ./perf_test >> table.tmp
           
-          # 4. Export to root for Python script
+          # Copy to root directory for Python injection logic
           cp table.tmp ../table.tmp
 
       - name: Inject into README via Python
@@ -53,36 +56,33 @@ jobs:
         run: |
           import os, sys
           
-          # Retrieve environment variables
           vendor = os.environ.get('VENDOR', 'INTEL')
-          
-          # Define markers exactly as they appear in your README.md
+          # Matching labels in your README.md
           start_m = f"[//]: # (INDUSTRIAL_PERFORMANCE_BENCHMARK_DATA_SECTION_{vendor}_START)"
           end_m = f"[//]: # (INDUSTRIAL_PERFORMANCE_BENCHMARK_DATA_SECTION_{vendor}_END)"
           
           if not os.path.exists("table.tmp"):
-              print("Critical Error: table.tmp was not generated!")
+              print("Error: table.tmp not found!")
               sys.exit(1)
               
           with open("table.tmp", "r") as f:
-              # Clean each line to prevent Markdown rendering issues
+              # Remove leading/trailing whitespace from each line
               table_data = "\n".join([line.strip() for line in f.readlines()])
           
           with open("README.md", "r", encoding="utf-8") as f:
-              content = f.read()
+              readme_content = f.read()
           
-          if start_m in content and end_m in content:
-              print(f"Injecting benchmark data for {vendor}...")
-              parts_before = content.split(start_m)
-              parts_after = parts_before[1].split(end_m)
+          if start_m in readme_content and end_m in readme_content:
+              print(f"Injecting data into {vendor} section...")
+              before = readme_content.split(start_m)[0]
+              after = readme_content.split(end_m)[1]
               
-              # Reconstruct README with new data between markers
-              updated_content = f"{parts_before[0]}{start_m}\n\n{table_data}\n\n{end_m}{parts_after[1]}"
-              
+              # Rebuild README content
+              new_readme = f"{before}{start_m}\n\n{table_data}\n\n{end_m}{after}"
               with open("README.md", "w", encoding="utf-8") as f:
-                  f.write(updated_content)
+                  f.write(new_readme)
           else:
-              print(f"Error: Markers for {vendor} not found. Check README.md!")
+              print(f"Error: Markers for {vendor} not found in README.md")
               sys.exit(1)
 
       - name: Synchronized Git Push
@@ -90,14 +90,14 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           
-          # Handling potential race conditions with rebase
+          # Retry loop to handle concurrent pushes to main branch
           for i in {1..5}; do
             git add README.md
-            if git commit -m "docs: update industrial indexing benchmarks [skip ci]"; then
+            if git commit -m "docs: sync industrial indexing benchmarks [skip ci]"; then
               git pull --rebase origin main
               if git push; then exit 0; fi
             else
-              echo "No changes to sync."
+              echo "No changes to commit."
               exit 0
             fi
             sleep 10
