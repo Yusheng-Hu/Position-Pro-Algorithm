@@ -51,7 +51,7 @@ jobs:
         echo "|---|---|---|---|" >> results.md
         
         # [cite_start]3. Iterating from N=9 to N=14 [cite: 2]
-        for n in 9 10 11 12 13 14
+        for n in 9 10 11 12
         do
           echo "Processing benchmark for N=$n..."
           H_TIME=$(./heap_test $n | grep "EXECUTION_TIME:" | awk '{print $2}')
@@ -130,3 +130,4 @@ jobs:
         else
           echo "No changes detected."
         fi
+
