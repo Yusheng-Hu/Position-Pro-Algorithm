@@ -44,15 +44,15 @@ The algorithm utilizes an **iterative state machine** to eliminate recursion ove
 
 [//]: # (UNIQUE_PP_ALGO_BENCHMARK_DATA_SECTION_START_DO_NOT_REMOVE)
 
-#### Last Run: Fri Feb 06 04:24:40 2026 UTC / Fri Feb 06 12:24:40 2026 (UTC+8)
+#### Last Run: Fri Feb 06 04:27:24 2026 UTC / Fri Feb 06 12:27:24 2026 (UTC+8)
 **Env: AMD EPYC 7763 64-Core Processor**
 
 | N | Heap (s) | PP (s) | Speedup |
 |---|---|---|---|
-| 9 | 0.005728 | 0.000681 | 8.41x |
-| 10 | 0.057982 | 0.006907 | 8.39x |
-| 11 | 0.642082 | 0.074569 | 8.61x |
-| 12 | 7.828179 | 0.840357 | 9.31x |
+| 9 | 0.005735 | 0.000744 | 7.70x |
+| 10 | 0.057985 | 0.007122 | 8.14x |
+| 11 | 0.643459 | 0.075382 | 8.53x |
+| 12 | 7.831593 | 0.839517 | 9.32x |
 
 [//]: # (UNIQUE_PP_ALGO_BENCHMARK_DATA_SECTION_END_DO_NOT_REMOVE)
 
