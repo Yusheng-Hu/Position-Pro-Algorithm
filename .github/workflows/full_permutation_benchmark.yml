@@ -44,7 +44,7 @@ jobs:
         echo "| N | Heap Algorithm (s) | PP Algorithm (s) | Speedup (Heap/PP) |" >> results.md
         echo "|---|---|---|---|" >> results.md
         
-        for n in 9 10 11 12 13 14; do
+        for n in 9 10 11 12; do
           H_TIME=$(./heap_test $n | grep "EXECUTION_TIME:" | awk '{print $2}')
           P_TIME=$(./pure_test $n | grep "EXECUTION_TIME:" | awk '{print $2}')
           SPEEDUP=$(echo "scale=2; $H_TIME / $P_TIME" | bc)
@@ -73,3 +73,4 @@ jobs:
             updated = f("{prefix}\n\n{start_marker}\n\n{new_table}\n\n{end_marker}\n\n{suffix}\n")
             with open("README.md", "w", encoding="utf-8") as f:
                 f.write(updated)
+
