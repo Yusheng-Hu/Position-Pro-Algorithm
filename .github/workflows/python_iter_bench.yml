@@ -5,7 +5,7 @@ on:
     branches: [ "main" ]
   workflow_dispatch:
 
-# Shared concurrency group to force sequential execution and prevent Exit Code 128
+# CRITICAL: Set cancel-in-progress to false to ensure every job completes in the queue
 concurrency:
   group: global-readme-sync
   cancel-in-progress: false
@@ -20,62 +20,45 @@ jobs:
     - name: Checkout Repository
       uses: actions/checkout@v4
       with:
-        fetch-depth: 0 # Full history required for rebase push
+        fetch-depth: 0 # Full history is required for a clean git rebase
 
     - name: Set up PyPy 3.10
       uses: actions/setup-python@v5
       with:
         python-version: 'pypy-3.10'
 
-    - name: Run Benchmark and Generate Report
+    - name: Run Benchmark and Format Report
       run: |
         cd python
-        # 1. Run the benchmark script first
+        # 1. Run the benchmark script to get raw numerical data
         python pp_iter.py > raw_data.tmp
         
-        # 2. Use Python to generate the final formatted report to avoid awk/shell errors
-        python3 -c "
-        import subprocess, datetime, os
-
-        # Get CPU Model
-        try:
-            cpu = subprocess.check_output('grep -m 1 \"model name\" /proc/cpuinfo', shell=True).decode().split(':')[1].strip()
-        except:
-            cpu = 'GitHub Actions Runner'
-
-        # Get Timestamps
-        now_utc = datetime.datetime.now(datetime.timezone.utc)
-        now_bj = now_utc + datetime.timedelta(hours=8)
-        time_str = f\"{now_utc.strftime('%a %b %d %H:%M:%S %Y')} UTC / {now_bj.strftime('%a %b %d %H:%M:%S %Y')} (UTC+8)\"
-
-        # Build Report Content
-        report = []
-        report.append(f'#### Last Automated Run: {time_str}')
-        report.append(f'**Environment: {cpu}**\n')
-        report.append('| N | Total Permutations | Itertools (s) | Position Pure (s) | Speed-up |')
-        report.append('|---|---|---|---|---|')
-
-        # Read raw data and format into table rows
-        if os.path.exists('raw_data.tmp'):
-            with open('raw_data.tmp', 'r') as f:
-                for line in f:
-                    parts = line.split()
-                    if len(parts) >= 5:
-                        report.append(f'| {parts[0]} | {parts[1]} | {parts[2]} | {parts[3]} | {parts[4]} |')
-
-        with open('bench_output.md', 'w', encoding='utf-8') as f:
-            f.write('\n'.join(report))
-        "
-        # Export to Job Summary for quick check
+        # 2. Capture hardware and time info using Shell
+        CPU_MODEL=$(grep -m 1 "model name" /proc/cpuinfo | cut -d: -f2 | sed 's/^[ \t]*//')
+        TIME_UTC=$(date -u +"%a %b %d %H:%M:%S %Y UTC")
+        TIME_BJ=$(TZ=Asia/Shanghai date +"%a %b %d %H:%M:%S %Y (UTC+8)")
+        
+        # 3. Construct a strictly formatted Markdown table to prevent alignment issues
+        echo "#### Last Automated Run: $TIME_UTC / $TIME_BJ" > bench_output.md
+        echo "**Environment: $CPU_MODEL (GitHub Actions Runner)**" >> bench_output.md
+        echo "" >> bench_output.md
+        echo "| N | Total Permutations | Itertools (s) | Position Pure (s) | Speed-up |" >> bench_output.md
+        echo "|---|---|---|---|---|" >> bench_output.md
+        
+        # Use awk to safely format each line into a table row
+        awk '{if(NF>=5) print "| " $1 " | " $2 " | " $3 " | " $4 " | " $5 " |"}' raw_data.tmp >> bench_output.md
+        
+        # Output to Step Summary for immediate verification
         cat bench_output.md >> $GITHUB_STEP_SUMMARY
 
-    - name: Inject into README.md
+    - name: Update README.md
       shell: python
       run: |
         import os, sys
         start_marker = "[//]: # (PYTHON_PP_ITER_BENCHMARK_START)"
         end_marker = "[//]: # (PYTHON_PP_ITER_BENCHMARK_END)"
 
+        # Read the new table and current README
         with open("python/bench_output.md", "r", encoding="utf-8") as f:
             new_report = f.read().strip()
         with open("README.md", "r", encoding="utf-8") as f:
@@ -85,28 +68,34 @@ jobs:
             prefix = readme.split(start_marker)[0].strip()
             suffix = readme.split(end_marker)[-1].strip()
             
-            # Combine all elements into the final block
+            # Reconstruct section with title, env info, and table
             content = f"### 🐍 Position Pure Iterator Performance (PyPy)\n\n{new_report}"
             
             with open("README.md", "w", encoding="utf-8") as f:
                 f.write(f"{prefix}\n\n{start_marker}\n\n{content}\n\n{end_marker}\n\n{suffix}\n")
         else:
-            print("Markers missing!")
+            print("Markers not found in README.md")
             sys.exit(1)
 
-    - name: Synchronized Git Push (Exit Code 128 Fix)
+    - name: Synchronized Git Push
       run: |
         git config --global user.name "github-actions[bot]"
         git config --global user.email "github-actions[bot]@users.noreply.github.com"
         
+        # Retry loop to handle Git lock and push conflicts (Exit Code 128 fix)
         for i in {1..5}; do
           git add README.md
           if git commit -m "docs: sync python benchmarks [skip ci]"; then
             git pull --rebase origin main
-            if git push; then exit 0; fi
+            if git push; then
+              echo "Push successful."
+              exit 0
+            fi
           else
-            exit 0 # No changes
+            echo "No changes to commit."
+            exit 0
           fi
+          echo "Conflict detected, retrying in 5 seconds..."
           sleep 5
         done
         exit 1
