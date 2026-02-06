@@ -22,6 +22,7 @@ jobs:
           fetch-depth: 0
 
       - name: Run Benchmarks
+        # 保持在子目录编译运行
         working-directory: ./PermutationIndexing
         run: |
           CPU_RAW=$(grep -m 1 "model name" /proc/cpuinfo | cut -d: -f2 | xargs)
@@ -37,27 +38,38 @@ jobs:
           echo "**Environment:** $CPU_RAW (GitHub Actions Runner)" >> table.tmp
           echo "" >> table.tmp
           ./perf_test >> table.tmp
+          
+          # 将结果移动到根目录，方便下一步 Python 读取
+          cp table.tmp ../table.tmp
 
       - name: Inject into README via Python
         shell: python
         run: |
           import os, sys
-          vendor = os.environ['VENDOR']
+          vendor = os.environ.get('VENDOR', 'INTEL')
           start_m = f"[//]: # (INDUSTRIAL_PERFORMANCE_BENCHMARK_DATA_SECTION_{vendor}_START)"
           end_m = f"[//]: # (INDUSTRIAL_PERFORMANCE_BENCHMARK_DATA_SECTION_{vendor}_END)"
           
-          with open("PermutationIndexing/table.tmp", "r") as f:
+          # 检查临时文件是否存在
+          if not os.path.exists("table.tmp"):
+              print("Error: table.tmp not found!")
+              sys.exit(1)
+              
+          with open("table.tmp", "r") as f:
               table = "\n".join([l.strip() for l in f.readlines()])
           
           with open("README.md", "r", encoding="utf-8") as f:
               readme = f.read()
           
           if start_m in readme and end_m in readme:
+              print(f"Found markers for {vendor}. Injecting...")
               prefix, suffix = readme.split(start_m)[0], readme.split(end_m)[1]
+              new_content = f"{prefix}{start_m}\n\n{table}\n\n{end_m}{suffix}"
               with open("README.md", "w", encoding="utf-8") as f:
-                  f.write(f"{prefix}{start_m}\n\n{table}\n\n{end_m}{suffix}")
+                  f.write(new_content)
           else:
-              print(f"Error: Markers for {vendor} not found!")
+              print(f"Error: Could not find markers: {start_m}")
+              # 打印 README 的前几行用于调试
               sys.exit(1)
 
       - name: Synchronized Push
@@ -70,6 +82,7 @@ jobs:
               git pull --rebase origin main
               if git push; then exit 0; fi
             else
+              echo "No changes to commit"
               exit 0
             fi
             sleep 10
