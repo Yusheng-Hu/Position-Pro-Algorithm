@@ -5,7 +5,7 @@ on:
     branches: [ "main" ]
   workflow_dispatch:
 
-# Use a global group name to force sequential execution and avoid Git conflicts
+# Shared concurrency group to ensure sequential README updates
 concurrency:
   group: global-readme-sync
   cancel-in-progress: false
@@ -20,7 +20,7 @@ jobs:
     - name: Checkout Repository
       uses: actions/checkout@v4
       with:
-        fetch-depth: 0 # Required for reliable git rebase
+        fetch-depth: 0 # Ensure full history for rebase during push
 
     - name: Set up PyPy 3.10
       uses: actions/setup-python@v5
@@ -30,31 +30,43 @@ jobs:
     - name: Run PP Iter Benchmark
       run: |
         cd python
-        # 1. Capture hardware info and timestamps in shell to ensure consistency
+        # 1. Capture hardware info and timestamps
         CPU_MODEL=$(grep -m 1 "model name" /proc/cpuinfo | cut -d: -f2 | sed 's/^[ \t]*//')
         TIME_UTC=$(date -u +"%a %b %d %H:%M:%S %Y UTC")
         TIME_BJ=$(TZ=Asia/Shanghai date +"%a %b %d %H:%M:%S %Y (UTC+8)")
         
-        # 2. Pre-format the header into a temporary file
-        echo "#### Last Automated Run: $TIME_UTC / $TIME_BJ" > bench_header.tmp
-        echo "**Environment: $CPU_MODEL (GitHub Actions Runner)**" >> bench_header.tmp
-        echo "" >> bench_header.tmp
+        # 2. Run the script and capture raw data
+        python pp_iter.py > raw_bench.tmp
         
-        # 3. Run the benchmark and append data
-        python pp_iter.py > bench_data.tmp
-        cat bench_header.tmp bench_data.tmp > bench_output.md
+        # 3. Format into a proper Markdown table using a small Python snippet
+        python3 -c "
+        import sys
+        header = '#### Last Automated Run: $TIME_UTC / $TIME_BJ\n**Environment: $CPU_MODEL**\n\n'
+        table_head = '| N | Total Permutations | Itertools (s) | Position Pure (s) | Speed-up |\n|---|---|---|---|---|\n'
+        
+        with open('raw_bench.tmp', 'r') as f:
+            lines = f.readlines()
+        
+        # Filter lines that look like data (starting with a number)
+        data_lines = []
+        for line in lines:
+            if line.strip() and line.strip()[0].isdigit():
+                parts = line.split()
+                if len(parts) >= 5:
+                    data_lines.append(f'| {parts[0]} | {parts[1]} | {parts[2]} | {parts[3]} | {parts[4]} |')
+        
+        with open('bench_output.md', 'w') as f:
+            f.write(header + table_head + '\n'.join(data_lines))
+        "
         cat bench_output.md >> $GITHUB_STEP_SUMMARY
 
-    - name: Update Root README.md via Python
+    - name: Update Root README.md
       shell: python
       run: |
-        import os, sys, datetime
-        
-        # Define boundary markers for injection
+        import os, sys
         start_marker = "[//]: # (PYTHON_PP_ITER_BENCHMARK_START)"
         end_marker = "[//]: # (PYTHON_PP_ITER_BENCHMARK_END)"
 
-        # Load benchmark result and current README
         try:
             with open("python/bench_output.md", "r", encoding="utf-8") as f:
                 new_data = f.read().strip()
@@ -67,13 +79,13 @@ jobs:
             prefix = readme.split(start_marker)[0].strip()
             suffix = readme.split(end_marker)[-1].strip()
             
-            # Construct updated section with unified title
+            # Construct the final content with valid Markdown table
             content = f"### 🐍 Position Pure Iterator Performance (PyPy)\n\n{new_data}"
             
             with open("README.md", "w", encoding="utf-8") as f:
                 f.write(f"{prefix}\n\n{start_marker}\n\n{content}\n\n{end_marker}\n\n{suffix}\n")
         else:
-            print("Markers not found in README.md")
+            print("Markers not found")
             sys.exit(1)
 
     - name: Synchronized Git Push
@@ -81,10 +93,9 @@ jobs:
         git config --global user.name "github-actions[bot]"
         git config --global user.email "github-actions[bot]@users.noreply.github.com"
         
-        # Retry loop to handle concurrent push conflicts (Exit Code 128 fix)
         for i in {1..5}; do
           git add README.md
-          # Commit first to ensure a clean index before rebasing
+          # Commit first to ensure index is clean
           if git commit -m "docs: sync python benchmarks [skip ci]"; then
             git pull --rebase origin main
             if git push; then
@@ -95,7 +106,6 @@ jobs:
             echo "No changes to commit."
             exit 0
           fi
-          echo "Conflict detected, retrying in 5s..."
           sleep 5
         done
         exit 1
