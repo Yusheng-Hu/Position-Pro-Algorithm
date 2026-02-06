@@ -81,8 +81,34 @@ At the request of Reddit users and other community members, a performance compar
 ## 🚀 Liner rank unrank: Position Pure (PP) vs. Myrvold-Ruskey (MR) 
 [//]: # (INDUSTRIAL_PERFORMANCE_BENCHMARK_DATA_SECTION_START_DO_NOT_REMOVE)
 
-#### Last Run: Fri Feb 06 04:08:21 2026 UTC / Fri Feb 06 12:08:21 2026 (UTC+8)
-**Env: AMD EPYC 7763 64-Core Processor**
+#### Last Automated Run: Fri Feb 06 04:15:21 2026 UTC / Fri Feb 06 12:15:21 2026 (UTC+8)
+**Environment: AMD EPYC 7763 64-Core Processor**
+
+**Ranking Performance (Permutation D → Factorial C)**
+| N | Distribution | MR (ns/it) | PP (ns/it) | Speedup (MR/PP) |
+|---|---|---|---|---|
+| 1000 | Random | 798.0 | 629.3 | **1.27x** |
+| 1000 | Sorted | 711.6 | 628.3 | **1.13x** |
+| 1000 | Reverse | 778.4 | 627.8 | **1.24x** |
+| 100000 | Random | 111017.3 | 90409.9 | **1.23x** |
+| 100000 | Sorted | 70668.1 | 62747.1 | **1.13x** |
+| 100000 | Reverse | 82585.9 | 66974.0 | **1.23x** |
+| 1000000 | Random | 1552616.0 | 1217352.7 | **1.28x** |
+| 1000000 | Sorted | 713585.4 | 623793.2 | **1.14x** |
+| 1000000 | Reverse | 847859.0 | 672885.3 | **1.26x** |
+
+**Unranking Performance (Factorial C → Permutation D)**
+| N | Distribution | MR (ns/it) | PP (ns/it) | Speedup (MR/PP) |
+|---|---|---|---|---|
+| 1000 | Random | 1213.8 | 627.9 | **1.93x** |
+| 1000 | Sorted | 711.4 | 628.9 | **1.13x** |
+| 1000 | Reverse | 906.0 | 727.3 | **1.25x** |
+| 100000 | Random | 116252.2 | 94320.6 | **1.23x** |
+| 100000 | Sorted | 70759.2 | 62598.3 | **1.13x** |
+| 100000 | Reverse | 84323.3 | 66524.7 | **1.27x** |
+| 1000000 | Random | 1555617.6 | 1218820.2 | **1.28x** |
+| 1000000 | Sorted | 715857.6 | 623996.8 | **1.15x** |
+| 1000000 | Reverse | 823699.6 | 668571.1 | **1.23x** |
 
 [//]: # (INDUSTRIAL_PERFORMANCE_BENCHMARK_DATA_SECTION_END_DO_NOT_REMOVE)
 
