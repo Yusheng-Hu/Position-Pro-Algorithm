@@ -1,45 +1,100 @@
 name: Position Pure Performance Report
+
 on:
   push:
     branches: [ main ]
   workflow_dispatch:
 
+# Queue this workflow with others to prevent Git lock (exit code 128)
 concurrency:
   group: global-readme-sync
   cancel-in-progress: false
 
+permissions:
+  contents: write
+
 jobs:
   benchmark_and_update:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
-      - name: Checkout
+      - name: Checkout Repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 0 # Full history for rebase
 
-      - name: Run Benchmarks
+      - name: Run Benchmarks and Format Data
         working-directory: ./PermutationIndexing
         run: |
-          CPU=$(grep -m 1 "model name" /proc/cpuinfo | cut -d: -f2 | xargs)
-          T_UTC=$(date -u +"%a %b %d %H:%M:%S %Y UTC")
-          T_BJ=$(TZ=Asia/Shanghai date +"%a %b %d %H:%M:%S %Y (UTC+8)")
-          echo "#### Last Run: $T_UTC / $T_BJ" > table.tmp
-          echo "**Env: $CPU**" >> table.tmp
-          # (Keep your g++ compile and run logic here)
-
-      - name: Inject and Push
-        run: |
-          export NEW_TABLE=$(cat PermutationIndexing/table.tmp)
-          perl -i -0777 -pe 's/\[\/\/\]: # \(INDUSTRIAL_PERFORMANCE_BENCHMARK_DATA_SECTION_START_DO_NOT_REMOVE\).*?\[\/\/\]: # \(INDUSTRIAL_PERFORMANCE_BENCHMARK_DATA_SECTION_END_DO_NOT_REMOVE\)/\[\/\/\]: # (INDUSTRIAL_PERFORMANCE_BENCHMARK_DATA_SECTION_START_DO_NOT_REMOVE)\n\n$ENV{NEW_TABLE}\n\n\[\/\/\]: # (INDUSTRIAL_PERFORMANCE_BENCHMARK_DATA_SECTION_END_DO_NOT_REMOVE)/s;' README.md
+          # 1. Capture Environment Info
+          CPU_MODEL=$(grep -m 1 "model name" /proc/cpuinfo | cut -d: -f2 | sed 's/^[ \t]*//')
+          TIME_UTC=$(date -u +"%a %b %d %H:%M:%S %Y UTC")
+          TIME_BJ=$(TZ=Asia/Shanghai date +"%a %b %d %H:%M:%S %Y (UTC+8)")
           
+          # 2. Start building the result table
+          echo "#### Last Automated Run: $TIME_UTC / $TIME_BJ" > table.tmp
+          echo "**Environment: $CPU_MODEL**" >> table.tmp
+          
+          # 3. Ranking Performance
+          g++ -O3 -march=native map_perm_algorithms.cpp map_algorithm_test.cpp -o benchmark_rank
+          echo -e "\n**Ranking Performance (Permutation D → Factorial C)**" >> table.tmp
+          echo "| N | Distribution | MR (ns/it) | PP (ns/it) | Speedup (MR/PP) |" >> table.tmp
+          echo "|---|---|---|---|---|" >> table.tmp
+          ./benchmark_rank | grep -E "^[0-9]" | awk '{printf "| %s | %s | %s | %s | **%s** |\n", $1, $2, $3, $4, $5}' >> table.tmp
+          
+          # 4. Unranking Performance
+          sed -i 's/measure_speed(MR_rank/measure_speed(MR_unrank/g' map_algorithm_test.cpp
+          sed -i 's/measure_speed(PositionPure_rank/measure_speed(PositionPure_unrank/g' map_algorithm_test.cpp
+          g++ -O3 -march=native map_perm_algorithms.cpp map_algorithm_test.cpp -o benchmark_unrank
+          echo -e "\n**Unranking Performance (Factorial C → Permutation D)**" >> table.tmp
+          echo "| N | Distribution | MR (ns/it) | PP (ns/it) | Speedup (MR/PP) |" >> table.tmp
+          echo "|---|---|---|---|---|" >> table.tmp
+          ./benchmark_unrank | grep -E "^[0-9]" | awk '{printf "| %s | %s | %s | %s | **%s** |\n", $1, $2, $3, $4, $5}' >> table.tmp
+
+      - name: Inject Data into README.md (Fixed Logic)
+        shell: python
+        run: |
+          import os
+          start_marker = "[//]: # (INDUSTRIAL_PERFORMANCE_BENCHMARK_DATA_SECTION_START_DO_NOT_REMOVE)"
+          end_marker = "[//]: # (INDUSTRIAL_PERFORMANCE_BENCHMARK_DATA_SECTION_END_DO_NOT_REMOVE)"
+          
+          # Read the correctly located temp file
+          with open("PermutationIndexing/table.tmp", "r") as f:
+              new_table = f.read().strip()
+          
+          with open("README.md", "r") as f:
+              content = f.read()
+              
+          if start_marker in content and end_marker in content:
+              prefix = content.split(start_marker)[0]
+              suffix = content.split(end_marker)[1]
+              # Construct the new content ensuring proper spacing
+              updated = f"{prefix}{start_marker}\n\n{new_table}\n\n{end_marker}{suffix}"
+              with open("README.md", "w") as f:
+                  f.write(updated)
+          else:
+              print("Markers not found!")
+              exit(1)
+
+      - name: Synchronized Git Push
+        run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Retry loop to handle concurrent push conflicts (Exit Code 128 fix)
           for i in {1..5}; do
             git add README.md
-            git commit -m "docs: sync industrial report [skip ci]" || exit 0
-            git pull --rebase origin main
-            if git push; then exit 0; fi
+            # Commit first to ensure index is clean
+            if git commit -m "docs: update industrial performance benchmarks [skip ci]"; then
+              git pull --rebase origin main
+              if git push; then
+                echo "Push successful."
+                exit 0
+              fi
+            else
+              echo "No changes to commit."
+              exit 0
+            fi
+            echo "Conflict detected, retrying in 5s..."
             sleep 5
           done
+          exit 1
