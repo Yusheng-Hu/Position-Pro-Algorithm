@@ -43,6 +43,17 @@ The **PositionPure** algorithm is a high-performance, iterative approach to gene
 The algorithm utilizes an **iterative state machine** to eliminate recursion overhead and leverages **hardware affinity binding** via the Windows API to minimize context-switching noise, with performance verified to nanosecond-level accuracy through **high-precision benchmarking**.
 
 [//]: # (UNIQUE_PP_ALGO_BENCHMARK_AMD_START)
+
+**Last Run:** Fri Feb 06 05:33:07 2026 UTC / Fri Feb 06 13:33:07 2026 (UTC+8)
+**Environment:** AMD EPYC 7763 64-Core Processor (GitHub Actions Runner)
+
+| N | Heap (s) | PP (s) | Speedup |
+|---|---|---|---|
+| 9 | 0.005828 | 0.001004 | 5.80x |
+| 10 | 0.058046 | 0.007308 | 7.94x |
+| 11 | 0.646793 | 0.074430 | 8.68x |
+| 12 | 7.841771 | 0.835791 | 9.38x |
+
 [//]: # (UNIQUE_PP_ALGO_BENCHMARK_AMD_END)
 
 [//]: # (UNIQUE_PP_ALGO_BENCHMARK_INTEL_START)
