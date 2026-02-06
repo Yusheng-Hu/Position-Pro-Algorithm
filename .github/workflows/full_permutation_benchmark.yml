@@ -5,6 +5,7 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+# Prevent race conditions by limiting concurrency to one run at a time
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -16,6 +17,7 @@ jobs:
   benchmark:
     runs-on: ubuntu-latest
     env:
+      # Aggressive optimization flags for C++ performance
       CXX_FLAGS: "-O3 -std=c++11 -march=native -flto -ffast-math -fomit-frame-pointer"
 
     steps:
@@ -26,6 +28,7 @@ jobs:
 
     - name: Compile Programs
       run: |
+        # Build executables for comparison
         cd FullPermutation
         g++ $CXX_FLAGS heap_perm.cpp -o heap_test -pthread
         g++ $CXX_FLAGS permpure_full.cpp -o pure_test -pthread
@@ -33,44 +36,82 @@ jobs:
     - name: Run Benchmarks
       run: |
         cd FullPermutation
-        # Gather environment and timestamps
+        
+        # 1. Capture hardware and dual-timezone info
         CPU_MODEL=$(grep -m 1 "model name" /proc/cpuinfo | cut -d: -f2 | sed 's/^[ \t]*//')
         TIME_UTC=$(date -u +"%a %b %d %H:%M:%S %Y UTC")
         TIME_BJ=$(TZ=Asia/Shanghai date +"%a %b %d %H:%M:%S %Y (UTC+8)")
         
+        # 2. Initialize results file
         echo "#### Last Automated Run: $TIME_UTC / $TIME_BJ" > results.md
-        echo "**Environment: $CPU_MODEL**" >> results.md
+        echo "**Environment: $CPU_MODEL (GitHub Actions Runner)**" >> results.md
         echo "" >> results.md
         echo "| N | Heap Algorithm (s) | PP Algorithm (s) | Speedup (Heap/PP) |" >> results.md
         echo "|---|---|---|---|" >> results.md
         
-        for n in 9 10 11 12; do
+        # 3. Execute benchmark for N=9 to N=14
+        for n in 9 10 11 12 13 14
+        do
+          echo "Benchmarking N=$n..."
           H_TIME=$(./heap_test $n | grep "EXECUTION_TIME:" | awk '{print $2}')
           P_TIME=$(./pure_test $n | grep "EXECUTION_TIME:" | awk '{print $2}')
-          SPEEDUP=$(echo "scale=2; $H_TIME / $P_TIME" | bc)
+          
+          # Avoid division by zero
+          if [ "$P_TIME" = "0" ] || [ "$P_TIME" = "0.000" ]; then
+            SPEEDUP="N/A"
+          else
+            SPEEDUP=$(echo "scale=2; $H_TIME / $P_TIME" | bc)
+          fi
           echo "| $n | $H_TIME | $P_TIME | ${SPEEDUP}x |" >> results.md
         done
+        
+        # Show summary in GitHub Action UI
         cat results.md >> $GITHUB_STEP_SUMMARY
 
     - name: Update README.md via Python
       shell: python
       run: |
+        import os
         import sys
+
+        # Define the specific markers in the root README.md
         start_marker = "[//]: # (UNIQUE_PP_ALGO_BENCHMARK_DATA_SECTION_START_DO_NOT_REMOVE)"
         end_marker = "[//]: # (UNIQUE_PP_ALGO_BENCHMARK_DATA_SECTION_END_DO_NOT_REMOVE)"
 
+        # Load benchmark results and target README
         try:
             with open("FullPermutation/results.md", "r", encoding="utf-8") as f:
                 new_table = f.read().strip()
+            
             with open("README.md", "r", encoding="utf-8") as f:
                 content = f.read()
-        except FileNotFoundError:
+        except FileNotFoundError as e:
+            print(f"File error: {e}")
             sys.exit(1)
 
+        # Inject new data between markers
         if start_marker in content and end_marker in content:
             prefix = content.split(start_marker)[0].strip()
             suffix = content.split(end_marker)[-1].strip()
-            updated = f("{prefix}\n\n{start_marker}\n\n{new_table}\n\n{end_marker}\n\n{suffix}\n")
+            
+            # Corrected f-string syntax (fixed the previous TypeError)
+            updated_readme = f"{prefix}\n\n{start_marker}\n\n{new_table}\n\n{end_marker}\n\n{suffix}\n"
+            
             with open("README.md", "w", encoding="utf-8") as f:
-                f.write(updated)
+                f.write(updated_readme)
+            print("README.md updated successfully.")
+        else:
+            print("Error: Boundary markers not found in README.md.")
+            sys.exit(1)
 
+    - name: Commit and Push Changes
+      run: |
+        # Set identity
+        git config --global user.name "github-actions[bot]"
+        git config --global user.email "github-actions[bot]@users.noreply.github.com"
+        
+        git add README.md
+        
+        # Only commit if changes exist
+        if ! git diff --quiet --staged; then
+          git commit -m "docs: auto-update full permutation benchmarks [skip ci]"
