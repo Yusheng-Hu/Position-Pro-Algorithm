@@ -42,19 +42,11 @@ The **PositionPure** algorithm is a high-performance, iterative approach to gene
 
 The algorithm utilizes an **iterative state machine** to eliminate recursion overhead and leverages **hardware affinity binding** via the Windows API to minimize context-switching noise, with performance verified to nanosecond-level accuracy through **high-precision benchmarking**.
 
-[//]: # (UNIQUE_PP_ALGO_BENCHMARK_DATA_SECTION_START_DO_NOT_REMOVE)
+[//]: # (UNIQUE_PP_ALGO_BENCHMARK_AMD_START)
+[//]: # (UNIQUE_PP_ALGO_BENCHMARK_AMD_END)
 
-#### Last Run: Fri Feb 06 04:49:56 2026 UTC / Fri Feb 06 12:49:56 2026 (UTC+8)
-**Env: AMD EPYC 7763 64-Core Processor**
-
-| N | Heap (s) | PP (s) | Speedup |
-|---|---|---|---|
-| 9 | 0.005811 | 0.001046 | 5.55x |
-| 10 | 0.058094 | 0.007269 | 7.99x |
-| 11 | 0.642343 | 0.074542 | 8.61x |
-| 12 | 7.830269 | 0.834742 | 9.38x |
-
-[//]: # (UNIQUE_PP_ALGO_BENCHMARK_DATA_SECTION_END_DO_NOT_REMOVE)
+[//]: # (UNIQUE_PP_ALGO_BENCHMARK_INTEL_START)
+[//]: # (UNIQUE_PP_ALGO_BENCHMARK_INTEL_END)
 
 ---
 
@@ -66,53 +58,22 @@ At the request of Reddit users and other community members, a performance compar
 * **Results**: Benchmark tests show that this algorithm improves performance by at least **1.4x**, with potential gains reaching over **2x** compared to the standard library.
 * **Future Plans**: For applications requiring even higher performance, a **C-compiled version** should be considered.
 
-[//]: # (PYTHON_PP_ITER_BENCHMARK_START)
-
 ### 🐍 Position Pure Iterator Performance (PyPy)
 
-#### Last Automated Run: Fri Feb 06 04:49:42 2026 UTC / Fri Feb 06 12:49:42 2026 (UTC+8)
-**Environment: AMD EPYC 7763 64-Core Processor (GitHub Actions Runner)**
+[//]: # (PYTHON_PP_ITER_BENCHMARK_AMD_START)
+[//]: # (PYTHON_PP_ITER_BENCHMARK_AMD_END)
 
-| N | Total Permutations | Itertools (s) | Position Pure (s) | Speed-up |
-| :--- | :--- | :--- | :--- | :--- |
-| 10 | 3,628,800 | 0.1120s | 0.0673s | **1.67x** |
-| 11 | 39,916,800 | 1.2125s | 0.5716s | **2.12x** |
+[//]: # (PYTHON_PP_ITER_BENCHMARK_INTEL_START)
+[//]: # (PYTHON_PP_ITER_BENCHMARK_INTEL_END)
 
-[//]: # (PYTHON_PP_ITER_BENCHMARK_END)
 
 ## 🚀 Liner rank unrank: Position Pure (PP) vs. Myrvold-Ruskey (MR) 
-[//]: # (INDUSTRIAL_PERFORMANCE_BENCHMARK_DATA_SECTION_START_DO_NOT_REMOVE)
 
-#### Last Automated Run: Fri Feb 06 04:45:33 2026 UTC / Fri Feb 06 12:45:33 2026 (UTC+8)
-**Environment: Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz**
+[//]: # (INDUSTRIAL_PERFORMANCE_BENCHMARK_DATA_SECTION_AMD_START)
+[//]: # (INDUSTRIAL_PERFORMANCE_BENCHMARK_DATA_SECTION_AMD_END)
 
-**Ranking Performance (Permutation D → Factorial C)**
-| N | Distribution | MR (ns/it) | PP (ns/it) | Speedup (MR/PP) |
-|---|---|---|---|---|
-| 1000 | Random | 700.8 | 572.0 | **1.23x** |
-| 1000 | Sorted | 659.4 | 474.7 | **1.39x** |
-| 1000 | Reverse | 670.1 | 574.1 | **1.17x** |
-| 100000 | Random | 109546.4 | 104449.4 | **1.05x** |
-| 100000 | Sorted | 63228.5 | 48455.7 | **1.30x** |
-| 100000 | Reverse | 70022.0 | 80017.2 | **0.88x** |
-| 1000000 | Random | 2356372.9 | 2161078.5 | **1.09x** |
-| 1000000 | Sorted | 714874.3 | 471080.0 | **1.52x** |
-| 1000000 | Reverse | 850264.4 | 875294.7 | **0.97x** |
-
-**Unranking Performance (Factorial C → Permutation D)**
-| N | Distribution | MR (ns/it) | PP (ns/it) | Speedup (MR/PP) |
-|---|---|---|---|---|
-| 1000 | Random | 709.0 | 574.3 | **1.23x** |
-| 1000 | Sorted | 660.7 | 474.0 | **1.39x** |
-| 1000 | Reverse | 670.8 | 571.2 | **1.17x** |
-| 100000 | Random | 109497.7 | 104780.3 | **1.05x** |
-| 100000 | Sorted | 63247.7 | 46809.4 | **1.35x** |
-| 100000 | Reverse | 69806.2 | 80430.5 | **0.87x** |
-| 1000000 | Random | 2189278.5 | 2012078.1 | **1.09x** |
-| 1000000 | Sorted | 702255.1 | 470173.7 | **1.49x** |
-| 1000000 | Reverse | 848589.7 | 868218.5 | **0.98x** |
-
-[//]: # (INDUSTRIAL_PERFORMANCE_BENCHMARK_DATA_SECTION_END_DO_NOT_REMOVE)
+[//]: # (INDUSTRIAL_PERFORMANCE_BENCHMARK_DATA_SECTION_INTEL_START)
+[//]: # (INDUSTRIAL_PERFORMANCE_BENCHMARK_DATA_SECTION_INTEL_END)
 
 
 ## 💻 Source Code

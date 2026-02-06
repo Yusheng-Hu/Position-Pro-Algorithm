@@ -16,74 +16,72 @@ jobs:
   python-bench:
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-    - name: Set up PyPy 3.10
-      uses: actions/setup-python@v5
-      with:
-        python-version: 'pypy-3.10'
+      - name: Set up PyPy 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: 'pypy-3.10'
 
-    - name: Run and Clean Benchmark
-      run: |
-        cd python
-        # 1. Capture hardware and time
-        CPU_MODEL=$(grep -m 1 "model name" /proc/cpuinfo | cut -d: -f2 | sed 's/^[ \t]*//')
-        TIME_UTC=$(date -u +"%a %b %d %H:%M:%S %Y UTC")
-        TIME_BJ=$(TZ=Asia/Shanghai date +"%a %b %d %H:%M:%S %Y (UTC+8)")
-        
-        # 2. Run script and IMMEDIATELY remove leading/trailing spaces from its output
-        python pp_iter.py | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' > clean_output.log
-        
-        # 3. Assemble the final markdown block
-        echo "#### Last Automated Run: $TIME_UTC / $TIME_BJ" > bench_final.md
-        echo "**Environment: $CPU_MODEL (GitHub Actions Runner)**" >> bench_final.md
-        echo "" >> bench_final.md
-        cat clean_output.log >> bench_final.md
-        
-        cat bench_final.md >> $GITHUB_STEP_SUMMARY
+      - name: Run Benchmark
+        run: |
+          cd python
+          # Run script and capture raw table output
+          python pp_iter.py > raw_bench.log
 
-    - name: Inject into README.md
-      shell: python
-      run: |
-        import os, sys
-        start_m = "[//]: # (PYTHON_PP_ITER_BENCHMARK_START)"
-        end_m = "[//]: # (PYTHON_PP_ITER_BENCHMARK_END)"
+      - name: Update README with CPU Detection
+        shell: python
+        run: |
+          import os, datetime, subprocess, sys
+          
+          # Detect CPU Vendor
+          cpu_info = subprocess.check_output("grep -m 1 'model name' /proc/cpuinfo", shell=True).decode()
+          cpu_model = cpu_info.split(":")[1].strip()
+          vendor = "AMD" if "AMD" in cpu_model.upper() else "INTEL"
+          
+          # Match Markers in README.md
+          start_m = f"[//]: # (PYTHON_PP_ITER_BENCHMARK_{vendor}_START)"
+          end_m = f"[//]: # (PYTHON_PP_ITER_BENCHMARK_{vendor}_END)"
+          
+          # Unified Timestamp
+          now_utc = datetime.datetime.now(datetime.timezone.utc)
+          now_bj = now_utc + datetime.timedelta(hours=8)
+          time_str = f"{now_utc.strftime('%a %b %d %H:%M:%S %Y')} UTC / {now_bj.strftime('%a %b %d %H:%M:%S %Y')} (UTC+8)"
+          
+          # Clean Data: Force remove leading spaces to fix Markdown table rendering
+          with open("python/raw_bench.log", "r") as f:
+              lines = [line.strip() for line in f.readlines() if line.strip()]
+              clean_data = "\n".join(lines)
+          
+          header = f"**Last Run:** {time_str}\n**Environment:** {cpu_model} (GitHub Actions Runner)\n\n"
+          
+          with open("README.md", "r", encoding="utf-8") as f:
+              readme = f.read()
+          
+          if start_m in readme and end_m in readme:
+              prefix = readme.split(start_m)[0]
+              suffix = readme.split(end_m)[1]
+              updated = f"{prefix}{start_m}\n\n{header}{clean_data}\n\n{end_m}{suffix}"
+              with open("README.md", "w", encoding="utf-8") as f:
+                  f.write(updated)
+          else:
+              print(f"Error: Markers for {vendor} not found in README!")
+              sys.exit(1)
 
-        with open("python/bench_final.md", "r", encoding="utf-8") as f:
-            new_table = f.read().strip()
-        with open("README.md", "r", encoding="utf-8") as f:
-            readme = f.read()
-
-        if start_m in readme and end_m in readme:
-            prefix = readme.split(start_m)[0]
-            suffix = readme.split(end_m)[1]
-            
-            # Clean up headers to match your desired style
-            section_title = "### 🐍 Position Pure Iterator Performance (PyPy)"
-            updated = f"{prefix}{start_m}\n\n{section_title}\n\n{new_table}\n\n{end_m}{suffix}"
-            
-            with open("README.md", "w", encoding="utf-8") as f:
-                f.write(updated)
-        else:
-            print("Markers missing!")
-            sys.exit(1)
-
-    - name: Synchronized Git Push
-      run: |
-        git config --global user.name "github-actions[bot]"
-        git config --global user.email "github-actions[bot]@users.noreply.github.com"
-        
-        for i in {1..5}; do
-          git add README.md
-          if git commit -m "docs: fix python benchmark table indentation [skip ci]"; then
-            git pull --rebase origin main
-            if git push; then exit 0; fi
-          else
-            exit 0
-          fi
-          sleep 5
-        done
-        exit 1
+      - name: Synchronized Git Push
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          for i in {1..5}; do
+            git add README.md
+            if git commit -m "docs: sync python benchmarks [skip ci]"; then
+              git pull --rebase origin main
+              if git push; then exit 0; fi
+            else
+              exit 0
+            fi
+            sleep 5
+          done

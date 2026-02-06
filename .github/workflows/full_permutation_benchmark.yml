@@ -1,10 +1,10 @@
-name: Automated Benchmark & README Update
+name: Full Permutation Benchmark
+
 on:
   push:
-    branches: [ main ]
+    branches: [ "main" ]
   workflow_dispatch:
 
-# Force all workflows to wait in a single queue to prevent race conditions
 concurrency:
   group: global-readme-sync
   cancel-in-progress: false
@@ -13,25 +13,34 @@ permissions:
   contents: write
 
 jobs:
-  benchmark:
+  cpp-bench:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: Checkout Repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Full history is required for successful rebasing
+          fetch-depth: 0
 
-      - name: Compile and Run
+      - name: Compile and Run Benchmark
         run: |
           cd FullPermutation
           g++ -O3 -march=native permpure_full.cpp -o pure_test -pthread
           g++ -O3 -march=native heap_perm.cpp -o heap_test -pthread
-          CPU=$(grep -m 1 "model name" /proc/cpuinfo | cut -d: -f2 | xargs)
+          
+          # Detect CPU and export for next steps
+          CPU_RAW=$(grep -m 1 "model name" /proc/cpuinfo | cut -d: -f2 | xargs)
+          if [[ "$CPU_RAW" == *"AMD"* ]]; then VENDOR="AMD"; else VENDOR="INTEL"; fi
+          echo "VENDOR=$VENDOR" >> $GITHUB_ENV
+          echo "CPU_MODEL=$CPU_RAW" >> $GITHUB_ENV
+          
           T_UTC=$(date -u +"%a %b %d %H:%M:%S %Y UTC")
           T_BJ=$(TZ=Asia/Shanghai date +"%a %b %d %H:%M:%S %Y (UTC+8)")
-          echo "#### Last Run: $T_UTC / $T_BJ" > results.md
-          echo "**Env: $CPU**" >> results.md
+          
+          # Prepare table header
+          echo "**Last Run:** $T_UTC / $T_BJ" > results.md
+          echo "**Environment:** $CPU_RAW (GitHub Actions Runner)" >> results.md
           echo -e "\n| N | Heap (s) | PP (s) | Speedup |\n|---|---|---|---|" >> results.md
+          
           for n in 9 10 11 12; do
             H=$(./heap_test $n | grep "EXECUTION_TIME:" | awk '{print $2}')
             P=$(./pure_test $n | grep "EXECUTION_TIME:" | awk '{print $2}')
@@ -39,26 +48,37 @@ jobs:
             echo "| $n | $H | $P | ${S}x |" >> results.md
           done
 
-      - name: Update README via Python
+      - name: Inject into README.md
         shell: python
         run: |
-          import sys
-          start, end = "[//]: # (UNIQUE_PP_ALGO_BENCHMARK_DATA_SECTION_START_DO_NOT_REMOVE)", "[//]: # (UNIQUE_PP_ALGO_BENCHMARK_DATA_SECTION_END_DO_NOT_REMOVE)"
-          with open("FullPermutation/results.md") as f: table = f.read().strip()
-          with open("README.md") as f: content = f.read()
-          if start in content:
-              new_readme = content.split(start)[0] + start + "\n\n" + table + "\n\n" + end + content.split(end)[-1]
-              open("README.md", "w").write(new_readme)
+          import os, sys
+          vendor = os.environ['VENDOR']
+          start = f"[//]: # (UNIQUE_PP_ALGO_BENCHMARK_{vendor}_START)"
+          end = f"[//]: # (UNIQUE_PP_ALGO_BENCHMARK_{vendor}_END)"
+          
+          with open("FullPermutation/results.md", "r") as f: table = f.read().strip()
+          with open("README.md", "r", encoding="utf-8") as f: readme = f.read()
+          
+          if start in readme and end in readme:
+              prefix = readme.split(start)[0]
+              suffix = readme.split(end)[1]
+              updated = f"{prefix}{start}\n\n{table}\n\n{end}{suffix}"
+              with open("README.md", "w", encoding="utf-8") as f: f.write(updated)
+          else:
+              print(f"Error: Markers for {vendor} not found!")
+              sys.exit(1)
 
-      - name: Synchronized Push
+      - name: Synchronized Git Push
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           for i in {1..5}; do
             git add README.md
-            # Commit first to clean the index, preventing 'index contains uncommitted changes' error
-            git commit -m "docs: sync benchmarks [skip ci]" || exit 0
-            git pull --rebase origin main
-            if git push; then exit 0; fi
+            if git commit -m "docs: sync cpp benchmarks [skip ci]"; then
+              git pull --rebase origin main
+              if git push; then exit 0; fi
+            else
+              exit 0
+            fi
             sleep 5
           done
