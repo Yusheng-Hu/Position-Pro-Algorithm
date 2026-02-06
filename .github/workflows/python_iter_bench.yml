@@ -1,53 +1,23 @@
-name: Python Iter Performance Bench
-
-on:
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
-  workflow_dispatch:
-
-# Prevent concurrent runs from clashing during README updates
-concurrency:
-  group: python-bench-${{ github.ref }}
-  cancel-in-progress: true
-
-permissions:
-  contents: write
-
-jobs:
-  python-bench:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v4
-      with:
-        # Fetch full history for rebase during push
-        fetch-depth: 0
-
-    - name: Set up PyPy 3.10
-      uses: actions/setup-python@v5
-      with:
-        python-version: 'pypy-3.10'
-
-    - name: Run PP Iter Benchmark
-      run: |
-        # Ensure we are in the correct directory to run the script
-        cd python
-        # Redirect the benchmark output to a temporary file
-        python pp_iter.py > bench_output.md
-        # Also show the output in the GitHub Action Summary
-        cat bench_output.md >> $GITHUB_STEP_SUMMARY
-
-    - name: Update Root README.md
+- name: Update Root README.md
       shell: python
       run: |
         import os
         import sys
+        import datetime
 
         # Markers for the Python benchmark section in the root README
         start_marker = "[//]: # (PYTHON_PP_ITER_BENCHMARK_START)"
         end_marker = "[//]: # (PYTHON_PP_ITER_BENCHMARK_END)"
+
+        # Time Calculations
+        now_utc = datetime.datetime.now(datetime.timezone.utc)
+        # Calculate UTC+8 (China Standard Time)
+        now_beijing = now_utc + datetime.timedelta(hours=8)
+        
+        format_str = "%a %b %d %H:%M:%S %Y"
+        time_display = f"{now_utc.strftime(format_str)} UTC / {now_beijing.strftime(format_str)} (UTC+8)"
+        
+        env_info = "GitHub Actions (ubuntu-latest)"
 
         # Load the new benchmark results
         try:
@@ -61,15 +31,16 @@ jobs:
             sys.exit(1)
 
         if start_marker in readme_content and end_marker in readme_content:
-            # Extract content before and after the markers
             parts_before = readme_content.split(start_marker)[0].strip()
             parts_after = readme_content.split(end_marker)[-1].strip()
             
-            # Reassemble with double-newlines for Markdown formatting
+            # Reassemble with both timezones
             updated_content = (
                 parts_before + "\n\n" + 
                 start_marker + "\n\n" + 
-                "### 🐍 Position Pure Iterator Performance (PyPy)\n" +
+                "### 🐍 Position Pure Iterator Performance (PyPy)\n\n" +
+                f"#### Last Automated Run: {time_display}\n" +
+                f"**Environment: {env_info}**\n\n" +
                 new_data + "\n\n" + 
                 end_marker + "\n\n" + 
                 parts_after + "\n"
@@ -77,36 +48,7 @@ jobs:
             
             with open("README.md", "w", encoding="utf-8") as f:
                 f.write(updated_content)
-            print("README.md updated with Python benchmark results.")
+            print(f"README.md updated. Time: {time_display}")
         else:
-            print("Error: Python benchmark markers not found in README.md.")
+            print("Error: Python benchmark markers not found.")
             sys.exit(1)
-
-    - name: Commit and Push Changes
-      run: |
-        # Set up Git bot identity
-        git config --global user.name "github-actions[bot]"
-        git config --global user.email "github-actions[bot]@users.noreply.github.com"
-        
-        git add README.md
-        
-        # Proceed only if the README file was actually modified
-        if ! git diff --quiet --staged; then
-          git commit -m "docs: update python iteration benchmark [skip ci]"
-          
-          # Retry loop to handle potential push conflicts
-          for i in {1..5}; do
-            echo "Pushing changes (Attempt $i)..."
-            # Rebase to integrate remote changes before pushing
-            git pull --rebase origin main
-            if git push; then
-              echo "Push successful."
-              exit 0
-            fi
-            echo "Push failed. Retrying in 5 seconds..."
-            sleep 5
-          done
-          exit 1
-        else
-          echo "No changes to commit."
-        fi

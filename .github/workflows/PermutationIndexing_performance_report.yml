@@ -19,16 +19,32 @@ jobs:
         id: run_benchmarks
         working-directory: ./PermutationIndexing
         run: |
+          # 1. Compile the benchmarking tool
           g++ -O3 -march=native map_perm_algorithms.cpp map_algorithm_test.cpp -o benchmark_rank
-          echo "#### Last Automated Run: $(date) (Environment: AMD EPYC 7763 64-Core Processor)" > table.tmp
+          
+          # 2. Get accurate Hardware and Time info
+          # Get CPU model name from the runner system
+          CPU_MODEL=$(grep -m 1 "model name" /proc/cpuinfo | cut -d: -f2 | sed 's/^[ \t]*//')
+          
+          # Format UTC and UTC+8 time
+          TIME_UTC=$(date -u +"%a %b %d %H:%M:%S %Y UTC")
+          # TZ=Asia/Shanghai is built-in for Linux to get UTC+8
+          TIME_BJ=$(TZ=Asia/Shanghai date +"%a %b %d %H:%M:%S %Y (UTC+8)")
+          
+          # 3. Initialize the table template with new time and hardware info
+          echo "#### Last Automated Run: $TIME_UTC / $TIME_BJ" > table.tmp
+          echo "**Environment: $CPU_MODEL (GitHub Actions Runner)**" >> table.tmp
+          
           echo -e "\n**Ranking Performance (Permutation D → Factorial C)**" >> table.tmp
           echo "| N | Distribution | MR (ns/it) | PP (ns/it) | Speedup (MR/PP) |" >> table.tmp
           echo "|---|---|---|---|---|" >> table.tmp
           ./benchmark_rank | grep -E "^[0-9]" | awk '{printf "| %s | %s | %s | %s | **%s** |\n", $1, $2, $3, $4, $5}' >> table.tmp
           
+          # 4. Switch to unrank benchmarking
           sed -i 's/measure_speed(MR_rank/measure_speed(MR_unrank/g' map_algorithm_test.cpp
           sed -i 's/measure_speed(PositionPure_rank/measure_speed(PositionPure_unrank/g' map_algorithm_test.cpp
           g++ -O3 -march=native map_perm_algorithms.cpp map_algorithm_test.cpp -o benchmark_unrank
+          
           echo -e "\n**Unranking Performance (Factorial C → Permutation D)**" >> table.tmp
           echo "| N | Distribution | MR (ns/it) | PP (ns/it) | Speedup (MR/PP) |" >> table.tmp
           echo "|---|---|---|---|---|" >> table.tmp
@@ -39,6 +55,7 @@ jobs:
           START_MARK: "INDUSTRIAL_PERFORMANCE_BENCHMARK_DATA_SECTION_START_DO_NOT_REMOVE"
           END_MARK: "INDUSTRIAL_PERFORMANCE_BENCHMARK_DATA_SECTION_END_DO_NOT_REMOVE"
         run: |
+          # Use env variable to pass content safely to perl
           export NEW_TABLE=$(cat PermutationIndexing/table.tmp)
           perl -i -0777 -pe '
             $s = quotemeta($ENV{START_MARK});
@@ -52,4 +69,8 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add README.md
+          
+          # Pull latest changes to avoid conflicts during push
+          git pull --rebase origin main
+          
           git diff --quiet && git diff --staged --quiet || (git commit -m "docs: auto-update industrial benchmarks [skip ci]" && git push)
