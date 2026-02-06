@@ -1,7 +1,7 @@
 name: Industrial Indexing Performance Report
 on:
-  push:
-    branches: [ main ]
+  # push:
+  #  branches: [ main ]
   workflow_dispatch:
 
 concurrency:
@@ -102,3 +102,4 @@ jobs:
             fi
             sleep 10
           done
+
