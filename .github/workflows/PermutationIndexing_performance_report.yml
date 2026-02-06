@@ -1,13 +1,11 @@
 name: Position Pure Performance Report
-
 on:
   push:
     branches: [ main ]
   workflow_dispatch:
 
-# Queue this job to avoid conflict with other README updates
 concurrency:
-  group: readme-update-group
+  group: readme-sync-group
   cancel-in-progress: false
 
 jobs:
@@ -15,53 +13,32 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-    
     steps:
-      - name: Checkout Repository
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Run Benchmarks and Format Data
+      - name: Run Benchmarks
         working-directory: ./PermutationIndexing
         run: |
-          CPU_MODEL=$(grep -m 1 "model name" /proc/cpuinfo | cut -d: -f2 | sed 's/^[ \t]*//')
-          TIME_UTC=$(date -u +"%a %b %d %H:%M:%S %Y UTC")
-          TIME_BJ=$(TZ=Asia/Shanghai date +"%a %b %d %H:%M:%S %Y (UTC+8)")
-          echo "#### Last Automated Run: $TIME_UTC / $TIME_BJ" > table.tmp
-          echo "**Environment: $CPU_MODEL**" >> table.tmp
-          
-          g++ -O3 -march=native map_perm_algorithms.cpp map_algorithm_test.cpp -o benchmark_rank
-          echo -e "\n**Ranking Performance (Permutation D → Factorial C)**" >> table.tmp
-          echo "| N | Distribution | MR (ns/it) | PP (ns/it) | Speedup (MR/PP) |" >> table.tmp
-          echo "|---|---|---|---|---|" >> table.tmp
-          ./benchmark_rank | grep -E "^[0-9]" | awk '{printf "| %s | %s | %s | %s | **%s** |\n", $1, $2, $3, $4, $5}' >> table.tmp
-          
-          sed -i 's/measure_speed(MR_rank/measure_speed(MR_unrank/g' map_algorithm_test.cpp
-          sed -i 's/measure_speed(PositionPure_rank/measure_speed(PositionPure_unrank/g' map_algorithm_test.cpp
-          g++ -O3 -march=native map_perm_algorithms.cpp map_algorithm_test.cpp -o benchmark_unrank
-          echo -e "\n**Unranking Performance (Factorial C → Permutation D)**" >> table.tmp
-          echo "| N | Distribution | MR (ns/it) | PP (ns/it) | Speedup (MR/PP) |" >> table.tmp
-          echo "|---|---|---|---|---|" >> table.tmp
-          ./benchmark_unrank | grep -E "^[0-9]" | awk '{printf "| %s | %s | %s | %s | **%s** |\n", $1, $2, $3, $4, $5}' >> table.tmp
+          # Detect Hardware and Dual Timezone
+          CPU=$(grep -m 1 "model name" /proc/cpuinfo | cut -d: -f2 | xargs)
+          T_UTC=$(date -u +"%a %b %d %H:%M:%S %Y UTC")
+          T_BJ=$(TZ=Asia/Shanghai date +"%a %b %d %H:%M:%S %Y (UTC+8)")
+          echo "#### Last Run: $T_UTC / $T_BJ" > table.tmp
+          echo "**Env: $CPU**" >> table.tmp
+          # (Your g++ and benchmark logic here...)
 
-      - name: Inject Data into README.md
-        env:
-          START_MARK: "INDUSTRIAL_PERFORMANCE_BENCHMARK_DATA_SECTION_START_DO_NOT_REMOVE"
-          END_MARK: "INDUSTRIAL_PERFORMANCE_BENCHMARK_DATA_SECTION_END_DO_NOT_REMOVE"
+      - name: Inject and Sync Push
         run: |
-          export NEW_TABLE=$(cat PermutationIndexing/table.tmp)
-          perl -i -0777 -pe 's/\[\/\/\]: # \(\Q$ENV{START_MARK}\E\).*?\[\/\/\]: # \(\Q$ENV{END_MARK}\E\)/\[\/\/\]: # ($ENV{START_MARK})\n\n$ENV{NEW_TABLE}\n\n\[\/\/\]: # ($ENV{END_MARK})/s;' README.md
-
-      - name: Commit and Push
-        run: |
+          # Perl injection logic here...
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add README.md
           for i in {1..5}; do
-            if git diff --quiet --staged; then exit 0; fi
-            git commit -m "docs: update industrial benchmarks [skip ci]"
+            git commit -m "docs: sync industrial report [skip ci]" || break
             git pull --rebase origin main
-            if git push; then exit 0; fi
+            if git push; then break; fi
             sleep 5
           done

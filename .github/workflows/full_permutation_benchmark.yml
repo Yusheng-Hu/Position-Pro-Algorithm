@@ -1,13 +1,12 @@
 name: Automated Benchmark & README Update
-
 on:
   push:
     branches: [ main ]
   workflow_dispatch:
 
-# Use a unified group name to force sequential execution across different workflows
+# Unified group ensures all README-writing tasks wait in line
 concurrency:
-  group: readme-update-group
+  group: readme-sync-group
   cancel-in-progress: false
 
 permissions:
@@ -16,77 +15,53 @@ permissions:
 jobs:
   benchmark:
     runs-on: ubuntu-latest
-    env:
-      CXX_FLAGS: "-O3 -std=c++11 -march=native -flto -ffast-math -fomit-frame-pointer"
-
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-    - name: Compile Programs
-      run: |
-        cd FullPermutation
-        g++ $CXX_FLAGS heap_perm.cpp -o heap_test -pthread
-        g++ $CXX_FLAGS permpure_full.cpp -o pure_test -pthread
+      - name: Compile and Run
+        run: |
+          cd FullPermutation
+          g++ -O3 -march=native permpure_full.cpp -o pure_test -pthread
+          g++ -O3 -march=native heap_perm.cpp -o heap_test -pthread
+          
+          # Dynamic Hardware & Time Detection
+          CPU=$(grep -m 1 "model name" /proc/cpuinfo | cut -d: -f2 | xargs)
+          T_UTC=$(date -u +"%a %b %d %H:%M:%S %Y UTC")
+          T_BJ=$(TZ=Asia/Shanghai date +"%a %b %d %H:%M:%S %Y (UTC+8)")
+          
+          echo "#### Last Run: $T_UTC / $T_BJ" > results.md
+          echo "**Env: $CPU**" >> results.md
+          echo "| N | Heap (s) | PP (s) | Speedup |" >> results.md
+          echo "|---|---|---|---|" >> results.md
+          for n in 9 10 11 12; do
+            H=$(./heap_test $n | grep "EXECUTION_TIME:" | awk '{print $2}')
+            P=$(./pure_test $n | grep "EXECUTION_TIME:" | awk '{print $2}')
+            S=$(echo "scale=2; $H / $P" | bc)
+            echo "| $n | $H | $P | ${S}x |" >> results.md
+          done
 
-    - name: Run Benchmarks
-      run: |
-        cd FullPermutation
-        CPU_MODEL=$(grep -m 1 "model name" /proc/cpuinfo | cut -d: -f2 | sed 's/^[ \t]*//')
-        TIME_UTC=$(date -u +"%a %b %d %H:%M:%S %Y UTC")
-        TIME_BJ=$(TZ=Asia/Shanghai date +"%a %b %d %H:%M:%S %Y (UTC+8)")
-        
-        echo "#### Last Automated Run: $TIME_UTC / $TIME_BJ" > results.md
-        echo "**Environment: $CPU_MODEL (GitHub Actions Runner)**" >> results.md
-        echo "" >> results.md
-        echo "| N | Heap Algorithm (s) | PP Algorithm (s) | Speedup (Heap/PP) |" >> results.md
-        echo "|---|---|---|---|" >> results.md
-        
-        for n in 9 10 11 12
-        do
-          H_TIME=$(./heap_test $n | grep "EXECUTION_TIME:" | awk '{print $2}')
-          P_TIME=$(./pure_test $n | grep "EXECUTION_TIME:" | awk '{print $2}')
-          SPEEDUP=$(echo "scale=2; $H_TIME / $P_TIME" | bc)
-          echo "| $n | $H_TIME | $P_TIME | ${SPEEDUP}x |" >> results.md
-        done
-        cat results.md >> $GITHUB_STEP_SUMMARY
+      - name: Inject to README
+        shell: python
+        run: |
+          import sys
+          start, end = "[//]: # (UNIQUE_PP_ALGO_BENCHMARK_DATA_SECTION_START_DO_NOT_REMOVE)", "[//]: # (UNIQUE_PP_ALGO_BENCHMARK_DATA_SECTION_END_DO_NOT_REMOVE)"
+          with open("FullPermutation/results.md") as f: table = f.read().strip()
+          with open("README.md") as f: content = f.read()
+          if start in content and end in content:
+              new_content = content.split(start)[0] + start + "\n\n" + table + "\n\n" + end + content.split(end)[-1]
+              open("README.md", "w").write(new_content)
 
-    - name: Update README.md via Python
-      shell: python
-      run: |
-        import os, sys
-        start_marker = "[//]: # (UNIQUE_PP_ALGO_BENCHMARK_DATA_SECTION_START_DO_NOT_REMOVE)"
-        end_marker = "[//]: # (UNIQUE_PP_ALGO_BENCHMARK_DATA_SECTION_END_DO_NOT_REMOVE)"
-        try:
-            with open("FullPermutation/results.md", "r", encoding="utf-8") as f:
-                new_table = f.read().strip()
-            with open("README.md", "r", encoding="utf-8") as f:
-                content = f.read()
-        except Exception as e:
-            sys.exit(1)
-
-        if start_marker in content and end_marker in content:
-            prefix = content.split(start_marker)[0].strip()
-            suffix = content.split(end_marker)[-1].strip()
-            # Fixed f-string syntax
-            updated_readme = f"{prefix}\n\n{start_marker}\n\n{new_table}\n\n{end_marker}\n\n{suffix}\n"
-            with open("README.md", "w", encoding="utf-8") as f:
-                f.write(updated_readme)
-        else:
-            sys.exit(1)
-
-    - name: Commit and Push Changes
-      run: |
-        git config --global user.name "github-actions[bot]"
-        git config --global user.email "github-actions[bot]@users.noreply.github.com"
-        git add README.md
-        for i in {1..5}; do
-          if git diff --quiet --staged; then exit 0; fi
-          git commit -m "docs: auto-update full permutation benchmarks [skip ci]"
-          git pull --rebase origin main
-          if git push; then exit 0; fi
-          sleep 5
-
-        done
+      - name: Synchronized Push
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          for i in {1..5}; do
+            git add README.md
+            git commit -m "docs: sync benchmark results [skip ci]" || break
+            git pull --rebase origin main
+            if git push; then break; fi
+            sleep 5
+          done
