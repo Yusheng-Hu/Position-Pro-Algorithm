@@ -24,11 +24,12 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
       with:
+        # [cite_start]Fetch full history to ensure rebase works correctly during push [cite: 2]
         fetch-depth: 0
 
     - name: Compile Programs
       run: |
-        # Build executables for comparison
+        # Build the executables for comparison
         cd FullPermutation
         g++ $CXX_FLAGS heap_perm.cpp -o heap_test -pthread
         g++ $CXX_FLAGS permpure_full.cpp -o pure_test -pthread
@@ -37,26 +38,26 @@ jobs:
       run: |
         cd FullPermutation
         
-        # 1. Capture hardware and dual-timezone info
+        # 1. Capture system hardware info and dual timestamps
         CPU_MODEL=$(grep -m 1 "model name" /proc/cpuinfo | cut -d: -f2 | sed 's/^[ \t]*//')
         TIME_UTC=$(date -u +"%a %b %d %H:%M:%S %Y UTC")
         TIME_BJ=$(TZ=Asia/Shanghai date +"%a %b %d %H:%M:%S %Y (UTC+8)")
         
-        # 2. Initialize results file
+        # 2. Initialize results markdown table
         echo "#### Last Automated Run: $TIME_UTC / $TIME_BJ" > results.md
         echo "**Environment: $CPU_MODEL (GitHub Actions Runner)**" >> results.md
         echo "" >> results.md
         echo "| N | Heap Algorithm (s) | PP Algorithm (s) | Speedup (Heap/PP) |" >> results.md
         echo "|---|---|---|---|" >> results.md
         
-        # 3. Execute benchmark for N=9 to N=14
+        # [cite_start]3. Iterating from N=9 to N=14 [cite: 2]
         for n in 9 10 11 12 13 14
         do
-          echo "Benchmarking N=$n..."
+          echo "Processing benchmark for N=$n..."
           H_TIME=$(./heap_test $n | grep "EXECUTION_TIME:" | awk '{print $2}')
           P_TIME=$(./pure_test $n | grep "EXECUTION_TIME:" | awk '{print $2}')
           
-          # Avoid division by zero
+          # [cite_start]Avoid division by zero [cite: 2]
           if [ "$P_TIME" = "0" ] || [ "$P_TIME" = "0.000" ]; then
             SPEEDUP="N/A"
           else
@@ -64,8 +65,7 @@ jobs:
           fi
           echo "| $n | $H_TIME | $P_TIME | ${SPEEDUP}x |" >> results.md
         done
-        
-        # Show summary in GitHub Action UI
+        # [cite_start]Output results to GitHub Step Summary [cite: 2]
         cat results.md >> $GITHUB_STEP_SUMMARY
 
     - name: Update README.md via Python
@@ -74,11 +74,11 @@ jobs:
         import os
         import sys
 
-        # Define the specific markers in the root README.md
+        # [cite_start]Identify injection points in README.md [cite: 2]
         start_marker = "[//]: # (UNIQUE_PP_ALGO_BENCHMARK_DATA_SECTION_START_DO_NOT_REMOVE)"
         end_marker = "[//]: # (UNIQUE_PP_ALGO_BENCHMARK_DATA_SECTION_END_DO_NOT_REMOVE)"
 
-        # Load benchmark results and target README
+        # [cite_start]Read generated benchmark data and target README [cite: 2]
         try:
             with open("FullPermutation/results.md", "r", encoding="utf-8") as f:
                 new_table = f.read().strip()
@@ -86,32 +86,47 @@ jobs:
             with open("README.md", "r", encoding="utf-8") as f:
                 content = f.read()
         except FileNotFoundError as e:
-            print(f"File error: {e}")
+            print(f"Error: {e}")
             sys.exit(1)
 
-        # Inject new data between markers
         if start_marker in content and end_marker in content:
+            # [cite_start]Isolate existing content segments [cite: 2]
             prefix = content.split(start_marker)[0].strip()
             suffix = content.split(end_marker)[-1].strip()
             
-            # Corrected f-string syntax (fixed the previous TypeError)
+            # Reconstruct README content (Fixed the f-string syntax error)
             updated_readme = f"{prefix}\n\n{start_marker}\n\n{new_table}\n\n{end_marker}\n\n{suffix}\n"
             
             with open("README.md", "w", encoding="utf-8") as f:
                 f.write(updated_readme)
-            print("README.md updated successfully.")
+            print("README.md updated.")
         else:
-            print("Error: Boundary markers not found in README.md.")
+            print("Error: Markers not found.")
             sys.exit(1)
 
     - name: Commit and Push Changes
       run: |
-        # Set identity
+        # [cite_start]Configure Git identity [cite: 2]
         git config --global user.name "github-actions[bot]"
         git config --global user.email "github-actions[bot]@users.noreply.github.com"
         
         git add README.md
         
-        # Only commit if changes exist
+        # [cite_start]Only proceed if changes exist [cite: 2]
         if ! git diff --quiet --staged; then
           git commit -m "docs: auto-update full permutation benchmarks [skip ci]"
+          
+          # [cite_start]Retry loop for push conflicts [cite: 2]
+          for i in {1..5}; do
+            echo "Push attempt $i..."
+            git pull --rebase origin main
+            if git push; then
+              echo "Push successful."
+              exit 0
+            fi
+            sleep 5
+          done
+          exit 1
+        else
+          echo "No changes detected."
+        fi
