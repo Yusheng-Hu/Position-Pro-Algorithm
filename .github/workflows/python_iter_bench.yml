@@ -26,42 +26,34 @@ jobs:
       with:
         python-version: 'pypy-3.10'
 
-    - name: Run and Debug Benchmark
+    - name: Run and Clean Benchmark
       run: |
         cd python
-        # 1. Capture Raw Output
-        python pp_iter.py > raw_output.log
-        
-        # 2. Extract Env Info
+        # 1. Capture hardware and time
         CPU_MODEL=$(grep -m 1 "model name" /proc/cpuinfo | cut -d: -f2 | sed 's/^[ \t]*//')
         TIME_UTC=$(date -u +"%a %b %d %H:%M:%S %Y UTC")
         TIME_BJ=$(TZ=Asia/Shanghai date +"%a %b %d %H:%M:%S %Y (UTC+8)")
         
-        # 3. Build a "Debug Report"
-        echo "#### Last Automated Run: $TIME_UTC / $TIME_BJ" > debug_report.md
-        echo "**Environment: $CPU_MODEL**" >> debug_report.md
-        echo "" >> debug_report.md
+        # 2. Run script and IMMEDIATELY remove leading/trailing spaces from its output
+        python pp_iter.py | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' > clean_output.log
         
-        echo "#### [DEBUG] Raw Script Output:" >> debug_report.md
-        echo '```text' >> debug_report.md
-        cat raw_output.log >> debug_report.md
-        echo '```' >> debug_report.md
+        # 3. Assemble the final markdown block
+        echo "#### Last Automated Run: $TIME_UTC / $TIME_BJ" > bench_final.md
+        echo "**Environment: $CPU_MODEL (GitHub Actions Runner)**" >> bench_final.md
+        echo "" >> bench_final.md
+        cat clean_output.log >> bench_final.md
         
-        echo "#### [DEBUG] Final Injected Table:" >> debug_report.md
-        # Just use the raw output directly since pp_iter.py already outputs a table
-        cat raw_output.log >> debug_report.md
-        
-        cat debug_report.md >> $GITHUB_STEP_SUMMARY
+        cat bench_final.md >> $GITHUB_STEP_SUMMARY
 
-    - name: Inject Debug Info into README.md
+    - name: Inject into README.md
       shell: python
       run: |
         import os, sys
         start_m = "[//]: # (PYTHON_PP_ITER_BENCHMARK_START)"
         end_m = "[//]: # (PYTHON_PP_ITER_BENCHMARK_END)"
 
-        with open("python/debug_report.md", "r", encoding="utf-8") as f:
-            debug_content = f.read().strip()
+        with open("python/bench_final.md", "r", encoding="utf-8") as f:
+            new_table = f.read().strip()
         with open("README.md", "r", encoding="utf-8") as f:
             readme = f.read()
 
@@ -69,9 +61,9 @@ jobs:
             prefix = readme.split(start_m)[0]
             suffix = readme.split(end_m)[1]
             
-            # Temporary content with debug logs to find the root cause
-            final_content = f"### 🐍 Debug Mode: Python Iter Performance\n\n{debug_content}"
-            updated = f"{prefix}{start_m}\n\n{final_content}\n\n{end_m}{suffix}"
+            # Clean up headers to match your desired style
+            section_title = "### 🐍 Position Pure Iterator Performance (PyPy)"
+            updated = f"{prefix}{start_m}\n\n{section_title}\n\n{new_table}\n\n{end_m}{suffix}"
             
             with open("README.md", "w", encoding="utf-8") as f:
                 f.write(updated)
@@ -86,7 +78,7 @@ jobs:
         
         for i in {1..5}; do
           git add README.md
-          if git commit -m "docs: debug python benchmark output [skip ci]"; then
+          if git commit -m "docs: fix python benchmark table indentation [skip ci]"; then
             git pull --rebase origin main
             if git push; then exit 0; fi
           else
