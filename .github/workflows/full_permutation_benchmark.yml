@@ -44,7 +44,7 @@ jobs:
         echo "| N | Heap Algorithm (s) | PP Algorithm (s) | Speedup (Heap/PP) |" >> results.md
         echo "|---|---|---|---|" >> results.md
         
-        for n in 9 10 11 12 13 14
+        for n in 9 10 11 12
         do
           H_TIME=$(./heap_test $n | grep "EXECUTION_TIME:" | awk '{print $2}')
           P_TIME=$(./pure_test $n | grep "EXECUTION_TIME:" | awk '{print $2}')
@@ -88,4 +88,5 @@ jobs:
           git pull --rebase origin main
           if git push; then exit 0; fi
           sleep 5
+
         done
