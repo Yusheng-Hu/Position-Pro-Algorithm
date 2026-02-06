@@ -85,34 +85,34 @@ At the request of Reddit users and other community members, a performance compar
 ## 🚀 Liner rank unrank: Position Pure (PP) vs. Myrvold-Ruskey (MR) 
 [//]: # (INDUSTRIAL_PERFORMANCE_BENCHMARK_DATA_SECTION_START_DO_NOT_REMOVE)
 
-#### Last Automated Run: Fri Feb 06 04:39:35 2026 UTC / Fri Feb 06 12:39:35 2026 (UTC+8)
+#### Last Automated Run: Fri Feb 06 04:41:22 2026 UTC / Fri Feb 06 12:41:22 2026 (UTC+8)
 **Environment: AMD EPYC 7763 64-Core Processor**
 
 **Ranking Performance (Permutation D → Factorial C)**
 | N | Distribution | MR (ns/it) | PP (ns/it) | Speedup (MR/PP) |
 |---|---|---|---|---|
-| 1000 | Random | 792.0 | 630.0 | **1.26x** |
-| 1000 | Sorted | 711.1 | 630.9 | **1.13x** |
-| 1000 | Reverse | 772.7 | 631.4 | **1.22x** |
-| 100000 | Random | 116906.8 | 95652.3 | **1.22x** |
-| 100000 | Sorted | 70914.7 | 62504.0 | **1.13x** |
-| 100000 | Reverse | 83768.5 | 66524.3 | **1.26x** |
-| 1000000 | Random | 1544090.1 | 1269060.6 | **1.22x** |
-| 1000000 | Sorted | 707919.9 | 626633.9 | **1.13x** |
-| 1000000 | Reverse | 804504.9 | 672174.6 | **1.20x** |
+| 1000 | Random | 795.0 | 630.3 | **1.26x** |
+| 1000 | Sorted | 710.7 | 627.8 | **1.13x** |
+| 1000 | Reverse | 778.1 | 627.1 | **1.24x** |
+| 100000 | Random | 115332.6 | 92196.5 | **1.25x** |
+| 100000 | Sorted | 71174.6 | 63016.7 | **1.13x** |
+| 100000 | Reverse | 83185.1 | 67130.9 | **1.24x** |
+| 1000000 | Random | 1571590.2 | 1204843.0 | **1.30x** |
+| 1000000 | Sorted | 707270.4 | 625587.2 | **1.13x** |
+| 1000000 | Reverse | 792759.5 | 671939.7 | **1.18x** |
 
 **Unranking Performance (Factorial C → Permutation D)**
 | N | Distribution | MR (ns/it) | PP (ns/it) | Speedup (MR/PP) |
 |---|---|---|---|---|
-| 1000 | Random | 797.1 | 628.5 | **1.27x** |
-| 1000 | Sorted | 711.5 | 627.9 | **1.13x** |
-| 1000 | Reverse | 774.2 | 628.6 | **1.23x** |
-| 100000 | Random | 116255.0 | 92557.5 | **1.26x** |
-| 100000 | Sorted | 70455.5 | 62627.1 | **1.12x** |
-| 100000 | Reverse | 83904.8 | 67124.8 | **1.25x** |
-| 1000000 | Random | 1550301.4 | 1222865.3 | **1.27x** |
-| 1000000 | Sorted | 713264.0 | 627048.4 | **1.14x** |
-| 1000000 | Reverse | 833339.6 | 673329.1 | **1.24x** |
+| 1000 | Random | 782.4 | 631.4 | **1.24x** |
+| 1000 | Sorted | 716.9 | 628.4 | **1.14x** |
+| 1000 | Reverse | 777.6 | 628.9 | **1.24x** |
+| 100000 | Random | 113873.0 | 90675.2 | **1.26x** |
+| 100000 | Sorted | 70814.4 | 63187.3 | **1.12x** |
+| 100000 | Reverse | 83754.0 | 67165.5 | **1.25x** |
+| 1000000 | Random | 1564983.8 | 1211968.4 | **1.29x** |
+| 1000000 | Sorted | 707066.6 | 625911.8 | **1.13x** |
+| 1000000 | Reverse | 824457.3 | 663195.1 | **1.24x** |
 
 [//]: # (INDUSTRIAL_PERFORMANCE_BENCHMARK_DATA_SECTION_END_DO_NOT_REMOVE)
 
