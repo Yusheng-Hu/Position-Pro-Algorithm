@@ -5,7 +5,7 @@ on:
     branches: [ "main" ]
   workflow_dispatch:
 
-# CRITICAL: Set cancel-in-progress to false to ensure every job completes in the queue
+# Disable automatic cancellation to ensure all queued benchmarks complete
 concurrency:
   group: global-readme-sync
   cancel-in-progress: false
@@ -20,61 +20,75 @@ jobs:
     - name: Checkout Repository
       uses: actions/checkout@v4
       with:
-        fetch-depth: 0 # Full history is required for a clean git rebase
+        fetch-depth: 0
 
     - name: Set up PyPy 3.10
       uses: actions/setup-python@v5
       with:
         python-version: 'pypy-3.10'
 
-    - name: Run Benchmark and Format Report
+    - name: Run Benchmark and Generate Content
+      id: bench_step
       run: |
         cd python
-        # 1. Run the benchmark script to get raw numerical data
-        python pp_iter.py > raw_data.tmp
-        
-        # 2. Capture hardware and time info using Shell
+        # 1. Capture hardware and time
         CPU_MODEL=$(grep -m 1 "model name" /proc/cpuinfo | cut -d: -f2 | sed 's/^[ \t]*//')
         TIME_UTC=$(date -u +"%a %b %d %H:%M:%S %Y UTC")
         TIME_BJ=$(TZ=Asia/Shanghai date +"%a %b %d %H:%M:%S %Y (UTC+8)")
         
-        # 3. Construct a strictly formatted Markdown table to prevent alignment issues
-        echo "#### Last Automated Run: $TIME_UTC / $TIME_BJ" > bench_output.md
-        echo "**Environment: $CPU_MODEL (GitHub Actions Runner)**" >> bench_output.md
-        echo "" >> bench_output.md
-        echo "| N | Total Permutations | Itertools (s) | Position Pure (s) | Speed-up |" >> bench_output.md
-        echo "|---|---|---|---|---|" >> bench_output.md
+        # 2. Run the actual script
+        python pp_iter.py > raw_data.log
         
-        # Use awk to safely format each line into a table row
-        awk '{if(NF>=5) print "| " $1 " | " $2 " | " $3 " | " $4 " | " $5 " |"}' raw_data.tmp >> bench_output.md
+        # 3. Use a robust Python block to build the Markdown table
+        # This handles any whitespace issues in the raw_data.log
+        python3 -c "
+        import os
         
-        # Output to Step Summary for immediate verification
-        cat bench_output.md >> $GITHUB_STEP_SUMMARY
+        header = '#### Last Automated Run: $TIME_UTC / $TIME_BJ\n'
+        env_info = '**Environment: $CPU_MODEL (GitHub Actions Runner)**\n\n'
+        table_header = '| N | Total Permutations | Itertools (s) | Position Pure (s) | Speed-up |\n|---|---|---|---|---|\n'
+        
+        table_rows = []
+        if os.path.exists('raw_data.log'):
+            with open('raw_data.log', 'r') as f:
+                for line in f:
+                    # Strip and split by any whitespace
+                    parts = line.strip().split()
+                    # Ensure we have the 5 expected columns (N, Total, Iter, PP, Speed)
+                    if len(parts) >= 5:
+                        row = f'| {parts[0]} | {parts[1]} | {parts[2]} | {parts[3]} | {parts[4]} |'
+                        table_rows.append(row)
+        
+        final_output = header + env_info + table_header + '\n'.join(table_rows)
+        with open('bench_formatted.md', 'w', encoding='utf-8') as f:
+            f.write(final_output)
+        "
+        cat bench_formatted.md >> $GITHUB_STEP_SUMMARY
 
-    - name: Update README.md
+    - name: Inject into README.md
       shell: python
       run: |
         import os, sys
-        start_marker = "[//]: # (PYTHON_PP_ITER_BENCHMARK_START)"
-        end_marker = "[//]: # (PYTHON_PP_ITER_BENCHMARK_END)"
-
-        # Read the new table and current README
-        with open("python/bench_output.md", "r", encoding="utf-8") as f:
-            new_report = f.read().strip()
+        start_m = "[//]: # (PYTHON_PP_ITER_BENCHMARK_START)"
+        end_m = "[//]: # (PYTHON_PP_ITER_BENCHMARK_END)"
+        
+        # Read formatted result from the python directory
+        with open("python/bench_formatted.md", "r", encoding="utf-8") as f:
+            new_table_content = f.read().strip()
+            
         with open("README.md", "r", encoding="utf-8") as f:
             readme = f.read()
 
-        if start_marker in readme and end_marker in readme:
-            prefix = readme.split(start_marker)[0].strip()
-            suffix = readme.split(end_marker)[-1].strip()
-            
-            # Reconstruct section with title, env info, and table
-            content = f"### 🐍 Position Pure Iterator Performance (PyPy)\n\n{new_report}"
-            
+        if start_m in readme and end_m in readme:
+            before = readme.split(start_m)[0]
+            after = readme.split(end_m)[1]
+            # Construct final section
+            section = f"### 🐍 Position Pure Iterator Performance (PyPy)\n\n{new_table_content}"
+            new_readme = f"{before}{start_m}\n\n{section}\n\n{end_m}{after}"
             with open("README.md", "w", encoding="utf-8") as f:
-                f.write(f"{prefix}\n\n{start_marker}\n\n{content}\n\n{end_marker}\n\n{suffix}\n")
+                f.write(new_readme)
         else:
-            print("Markers not found in README.md")
+            print("Error: Markers not found in README.md")
             sys.exit(1)
 
     - name: Synchronized Git Push
@@ -82,20 +96,15 @@ jobs:
         git config --global user.name "github-actions[bot]"
         git config --global user.email "github-actions[bot]@users.noreply.github.com"
         
-        # Retry loop to handle Git lock and push conflicts (Exit Code 128 fix)
         for i in {1..5}; do
           git add README.md
-          if git commit -m "docs: sync python benchmarks [skip ci]"; then
+          if git commit -m "docs: fix python benchmark table formatting [skip ci]"; then
             git pull --rebase origin main
-            if git push; then
-              echo "Push successful."
-              exit 0
-            fi
+            if git push; then exit 0; fi
           else
-            echo "No changes to commit."
+            echo "No changes to commit"
             exit 0
           fi
-          echo "Conflict detected, retrying in 5 seconds..."
           sleep 5
         done
         exit 1
