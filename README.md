@@ -47,15 +47,15 @@ The **PositionPure** algorithm is a high-performance, iterative approach to gene
 
 [//]: # (UNIQUE_PP_ALGO_BENCHMARK_DATA_SECTION_START_DO_NOT_REMOVE)
 
-#### Last Automated Run: Fri Feb 06 03:13:37 2026 UTC / Fri Feb 06 11:13:37 2026 (UTC+8)
+#### Last Automated Run: Fri Feb 06 03:17:45 2026 UTC / Fri Feb 06 11:17:45 2026 (UTC+8)
 **Environment: AMD EPYC 7763 64-Core Processor (GitHub Actions Runner)**
 
 | N | Heap Algorithm (s) | PP Algorithm (s) | Speedup (Heap/PP) |
 |---|---|---|---|
-| 9 | 0.005773 | 0.001026 | 5.62x |
-| 10 | 0.058102 | 0.007200 | 8.06x |
-| 11 | 0.646756 | 0.073909 | 8.75x |
-| 12 | 7.845010 | 0.819478 | 9.57x |
+| 9 | 0.005749 | 0.000753 | 7.63x |
+| 10 | 0.058195 | 0.007221 | 8.05x |
+| 11 | 0.646057 | 0.074723 | 8.64x |
+| 12 | 7.845678 | 0.821664 | 9.54x |
 
 [//]: # (UNIQUE_PP_ALGO_BENCHMARK_DATA_SECTION_END_DO_NOT_REMOVE)
 
