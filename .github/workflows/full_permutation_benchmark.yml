@@ -43,7 +43,7 @@ jobs:
           echo "| N | Heap (s) | PP (s) | Speedup |" >> results.md
           echo "|---|---|---|---|" >> results.md
           
-          for n in 9 10 11 12; do
+          for n in 9 10 11 12 13 14; do
             H=$(./heap_test $n | grep "EXECUTION_TIME:" | awk '{print $2}')
             P=$(./pure_test $n | grep "EXECUTION_TIME:" | awk '{print $2}')
             S=$(echo "scale=2; $H / $P" | bc)
@@ -90,4 +90,5 @@ jobs:
               exit 0
             fi
             sleep 5
+
           done
