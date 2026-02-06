@@ -5,6 +5,11 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+# Queue this job to avoid conflict with other README updates
+concurrency:
+  group: readme-update-group
+  cancel-in-progress: false
+
 jobs:
   benchmark_and_update:
     runs-on: ubuntu-latest
@@ -14,27 +19,24 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Run Benchmarks and Format Data
         working-directory: ./PermutationIndexing
         run: |
-          # Detect Hardware and Time
           CPU_MODEL=$(grep -m 1 "model name" /proc/cpuinfo | cut -d: -f2 | sed 's/^[ \t]*//')
           TIME_UTC=$(date -u +"%a %b %d %H:%M:%S %Y UTC")
           TIME_BJ=$(TZ=Asia/Shanghai date +"%a %b %d %H:%M:%S %Y (UTC+8)")
-          
-          # Initialize table with hardware and dual timestamps
           echo "#### Last Automated Run: $TIME_UTC / $TIME_BJ" > table.tmp
           echo "**Environment: $CPU_MODEL**" >> table.tmp
           
-          # Ranking Benchmark
           g++ -O3 -march=native map_perm_algorithms.cpp map_algorithm_test.cpp -o benchmark_rank
           echo -e "\n**Ranking Performance (Permutation D → Factorial C)**" >> table.tmp
           echo "| N | Distribution | MR (ns/it) | PP (ns/it) | Speedup (MR/PP) |" >> table.tmp
           echo "|---|---|---|---|---|" >> table.tmp
           ./benchmark_rank | grep -E "^[0-9]" | awk '{printf "| %s | %s | %s | %s | **%s** |\n", $1, $2, $3, $4, $5}' >> table.tmp
           
-          # Unranking Benchmark
           sed -i 's/measure_speed(MR_rank/measure_speed(MR_unrank/g' map_algorithm_test.cpp
           sed -i 's/measure_speed(PositionPure_rank/measure_speed(PositionPure_unrank/g' map_algorithm_test.cpp
           g++ -O3 -march=native map_perm_algorithms.cpp map_algorithm_test.cpp -o benchmark_unrank
@@ -49,17 +51,17 @@ jobs:
           END_MARK: "INDUSTRIAL_PERFORMANCE_BENCHMARK_DATA_SECTION_END_DO_NOT_REMOVE"
         run: |
           export NEW_TABLE=$(cat PermutationIndexing/table.tmp)
-          perl -i -0777 -pe '
-            $s = quotemeta($ENV{START_MARK});
-            $e = quotemeta($ENV{END_MARK});
-            $replacement = $ENV{NEW_TABLE};
-            s/\[\/\/\]: # \($s\).*?\[\/\/\]: # \($e\)/\[\/\/\]: # ($ENV{START_MARK})\n\n$replacement\n\n\[\/\/\]: # ($ENV{END_MARK})/s;
-          ' README.md
+          perl -i -0777 -pe 's/\[\/\/\]: # \(\Q$ENV{START_MARK}\E\).*?\[\/\/\]: # \(\Q$ENV{END_MARK}\E\)/\[\/\/\]: # ($ENV{START_MARK})\n\n$ENV{NEW_TABLE}\n\n\[\/\/\]: # ($ENV{END_MARK})/s;' README.md
 
       - name: Commit and Push
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add README.md
-          git pull --rebase origin main
-          git diff --quiet && git diff --staged --quiet || (git commit -m "docs: update industrial benchmarks [skip ci]" && git push)
+          for i in {1..5}; do
+            if git diff --quiet --staged; then exit 0; fi
+            git commit -m "docs: update industrial benchmarks [skip ci]"
+            git pull --rebase origin main
+            if git push; then exit 0; fi
+            sleep 5
+          done
