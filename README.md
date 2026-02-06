@@ -46,6 +46,17 @@ The algorithm utilizes an **iterative state machine** to eliminate recursion ove
 [//]: # (UNIQUE_PP_ALGO_BENCHMARK_AMD_END)
 
 [//]: # (UNIQUE_PP_ALGO_BENCHMARK_INTEL_START)
+
+**Last Run:** Fri Feb 06 05:21:46 2026 UTC / Fri Feb 06 13:21:46 2026 (UTC+8)
+**Environment:** Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz (GitHub Actions Runner)
+
+| N | Heap (s) | PP (s) | Speedup |
+|---|---|---|---|
+| 9 | 0.005852 | 0.000841 | 6.95x |
+| 10 | 0.059346 | 0.007168 | 8.27x |
+| 11 | 0.652040 | 0.075604 | 8.62x |
+| 12 | 7.781223 | 0.921408 | 8.44x |
+
 [//]: # (UNIQUE_PP_ALGO_BENCHMARK_INTEL_END)
 
 ---
