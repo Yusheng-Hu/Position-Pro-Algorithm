@@ -1,8 +1,8 @@
 name: Python Iter Performance Bench
 
 on:
-  push:
-    branches: [ "main" ]
+  # push:
+  #  branches: [ "main" ]
   workflow_dispatch:
 
 concurrency:
@@ -80,4 +80,5 @@ jobs:
               exit 0
             fi
             sleep 5
+
           done
