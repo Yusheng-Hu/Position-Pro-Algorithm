@@ -1,11 +1,9 @@
 name: Python Iter Performance Bench
-
 on:
   push:
-    branches: [ "main" ]
+    branches: [ main ]
   workflow_dispatch:
 
-# Use the same group name as other workflows to ensure they queue up
 concurrency:
   group: readme-sync-group
   cancel-in-progress: false
@@ -17,85 +15,39 @@ jobs:
   python-bench:
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-    - name: Set up PyPy 3.10
-      uses: actions/setup-python@v5
-      with:
-        python-version: 'pypy-3.10'
+      - name: Run PyPy Benchmark
+        run: |
+          cd python
+          python3 pp_iter.py > bench_output.md
 
-    - name: Run PP Iter Benchmark
-      run: |
-        # Run benchmark and capture to temporary file
-        cd python
-        python pp_iter.py > bench_output.md
-        cat bench_output.md >> $GITHUB_STEP_SUMMARY
+      - name: Update README via Python
+        shell: python
+        run: |
+          import sys, datetime
+          start, end = "[//]: # (PYTHON_PP_ITER_BENCHMARK_START)", "[//]: # (PYTHON_PP_ITER_BENCHMARK_END)"
+          now_utc = datetime.datetime.now(datetime.timezone.utc)
+          now_bj = now_utc + datetime.timedelta(hours=8)
+          time_str = f"{now_utc.strftime('%a %b %d %H:%M:%S %Y')} UTC / {now_bj.strftime('%a %b %d %H:%M:%S %Y')} (UTC+8)"
+          with open("python/bench_output.md") as f: data = f.read().strip()
+          with open("README.md") as f: readme = f.read()
+          if start in readme:
+              header = f"### 🐍 Position Pure Iterator Performance (PyPy)\n\n#### Last Run: {time_str}\n"
+              new_readme = readme.split(start)[0] + start + "\n\n" + header + data + "\n\n" + end + readme.split(end)[-1]
+              with open("README.md", "w") as f: f.write(new_readme)
 
-    - name: Update Root README.md
-      shell: python
-      run: |
-        import os, sys, datetime, subprocess
-
-        # Define boundary markers for injection
-        start_marker = "[//]: # (PYTHON_PP_ITER_BENCHMARK_START)"
-        end_marker = "[//]: # (PYTHON_PP_ITER_BENCHMARK_END)"
-
-        # Fetch system hardware and generate dual timestamps
-        try:
-            cpu_info = subprocess.check_output("grep -m 1 'model name' /proc/cpuinfo", shell=True).decode().split(":")[1].strip()
-        except:
-            cpu_info = "GitHub Actions Runner"
-
-        now_utc = datetime.datetime.now(datetime.timezone.utc)
-        now_beijing = now_utc + datetime.timedelta(hours=8)
-        time_str = f"{now_utc.strftime('%a %b %d %H:%M:%S %Y')} UTC / {now_beijing.strftime('%a %b %d %H:%M:%S %Y')} (UTC+8)"
-
-        # Load benchmark result and README
-        try:
-            with open("python/bench_output.md", "r", encoding="utf-8") as f:
-                new_data = f.read().strip()
-            with open("README.md", "r", encoding="utf-8") as f:
-                readme = f.read()
-        except FileNotFoundError:
-            sys.exit(1)
-
-        if start_marker in readme and end_marker in readme:
-            prefix = readme.split(start_marker)[0].strip()
-            suffix = readme.split(end_marker)[-1].strip()
-            
-            # Construct section with environment info
-            content = f"### 🐍 Position Pure Iterator Performance (PyPy)\n\n#### Last Automated Run: {time_str}\n**Environment: {cpu_info}**\n\n{new_data}"
-            
-            with open("README.md", "w", encoding="utf-8") as f:
-                f.write(f"{prefix}\n\n{start_marker}\n\n{content}\n\n{end_marker}\n\n{suffix}\n")
-        else:
-            print("Markers not found in README.md")
-            sys.exit(1)
-
-    - name: Synchronized Commit and Push
-      run: |
-        # Configure Git identity for the bot
-        git config --global user.name "github-actions[bot]"
-        git config --global user.email "github-actions[bot]@users.noreply.github.com"
-        
-        git add README.md
-        
-        # Retry loop to handle concurrent push conflicts
-        for i in {1..5}; do
-          if git diff --quiet --staged; then
-            echo "No changes to commit."
-            exit 0
-          fi
-          git commit -m "docs: auto-update python iter benchmarks [skip ci]"
-          git pull --rebase origin main
-          if git push; then
-            echo "Push successful."
-            exit 0
-          fi
-          echo "Conflict detected, retrying in 5s..."
-          sleep 5
-        done
-        exit 1
+      - name: Synchronized Push
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          for i in {1..5}; do
+            git add README.md
+            git commit -m "docs: update python benchmarks [skip ci]" || break
+            git pull --rebase origin main
+            if git push; then exit 0; fi
+            sleep 5
+          done

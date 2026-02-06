@@ -4,7 +4,6 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
-# Unified group ensures all README-writing tasks wait in line
 concurrency:
   group: readme-sync-group
   cancel-in-progress: false
@@ -16,26 +15,24 @@ jobs:
   benchmark:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout Repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 0 # Required for rebase
 
-      - name: Compile and Run
+      - name: Compile and Run Benchmarks
         run: |
           cd FullPermutation
           g++ -O3 -march=native permpure_full.cpp -o pure_test -pthread
           g++ -O3 -march=native heap_perm.cpp -o heap_test -pthread
           
-          # Dynamic Hardware & Time Detection
           CPU=$(grep -m 1 "model name" /proc/cpuinfo | cut -d: -f2 | xargs)
           T_UTC=$(date -u +"%a %b %d %H:%M:%S %Y UTC")
           T_BJ=$(TZ=Asia/Shanghai date +"%a %b %d %H:%M:%S %Y (UTC+8)")
           
           echo "#### Last Run: $T_UTC / $T_BJ" > results.md
           echo "**Env: $CPU**" >> results.md
-          echo "| N | Heap (s) | PP (s) | Speedup |" >> results.md
-          echo "|---|---|---|---|" >> results.md
+          echo -e "\n| N | Heap (s) | PP (s) | Speedup |\n|---|---|---|---|" >> results.md
           for n in 9 10 11 12; do
             H=$(./heap_test $n | grep "EXECUTION_TIME:" | awk '{print $2}')
             P=$(./pure_test $n | grep "EXECUTION_TIME:" | awk '{print $2}')
@@ -43,25 +40,28 @@ jobs:
             echo "| $n | $H | $P | ${S}x |" >> results.md
           done
 
-      - name: Inject to README
+      - name: Inject into README.md
         shell: python
         run: |
           import sys
-          start, end = "[//]: # (UNIQUE_PP_ALGO_BENCHMARK_DATA_SECTION_START_DO_NOT_REMOVE)", "[//]: # (UNIQUE_PP_ALGO_BENCHMARK_DATA_SECTION_END_DO_NOT_REMOVE)"
+          start_tag = "[//]: # (UNIQUE_PP_ALGO_BENCHMARK_DATA_SECTION_START_DO_NOT_REMOVE)"
+          end_tag = "[//]: # (UNIQUE_PP_ALGO_BENCHMARK_DATA_SECTION_END_DO_NOT_REMOVE)"
           with open("FullPermutation/results.md") as f: table = f.read().strip()
           with open("README.md") as f: content = f.read()
-          if start in content and end in content:
-              new_content = content.split(start)[0] + start + "\n\n" + table + "\n\n" + end + content.split(end)[-1]
-              open("README.md", "w").write(new_content)
+          if start_tag in content:
+              parts = content.split(start_tag)
+              suffix = parts[1].split(end_tag)[1]
+              new_content = parts[0] + start_tag + "\n\n" + table + "\n\n" + end_tag + suffix
+              with open("README.md", "w") as f: f.write(new_content)
 
-      - name: Synchronized Push
+      - name: Robust Synchronized Push
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           for i in {1..5}; do
             git add README.md
-            git commit -m "docs: sync benchmark results [skip ci]" || break
+            git commit -m "docs: update full benchmarks [skip ci]" || break
             git pull --rebase origin main
-            if git push; then break; fi
+            if git push; then exit 0; fi
             sleep 5
           done
