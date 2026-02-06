@@ -113,6 +113,33 @@ At the request of Reddit users and other community members, a performance compar
 [//]: # (INDUSTRIAL_PERFORMANCE_BENCHMARK_DATA_SECTION_AMD_END)
 
 [//]: # (INDUSTRIAL_PERFORMANCE_BENCHMARK_DATA_SECTION_INTEL_START)
+
+**Last Run:** Fri Feb 06 05:55:02 2026 UTC / Fri Feb 06 13:55:02 2026 (UTC+8)
+**Environment:** Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz (GitHub Actions Runner)
+
+====================================================
+PHASE 1: CORRECTNESS VALIDATION
+====================================================
+[SUCCESS] Both PP and MR algorithms passed round-trip tests.
+
+==================================================================
+PHASE 2: INDUSTRIAL BENCHMARK (Core-Locked Recommended)
+==================================================================
+N         Dist        MR (ns/it)     PP (ns/it)     Speedup
+------------------------------------------------------------------
+1000      Random      716.0          575.7          1.24x
+1000      Sorted      597.4          473.8          1.26x
+1000      Reverse     671.3          572.9          1.17x
+------------------------------------------------------------------
+100000    Random      109407.2       104965.1       1.04x
+100000    Sorted      56732.8        46972.8        1.21x
+100000    Reverse     70165.2        80098.7        0.88x
+------------------------------------------------------------------
+1000000   Random      2405345.9      2209331.0      1.09x
+1000000   Sorted      664216.2       474446.7       1.40x
+1000000   Reverse     858282.0       871200.4       0.99x
+------------------------------------------------------------------
+
 [//]: # (INDUSTRIAL_PERFORMANCE_BENCHMARK_DATA_SECTION_INTEL_END)
 
 
