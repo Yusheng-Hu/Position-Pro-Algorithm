@@ -40,10 +40,7 @@ The **Position-Pure Algorithm** and **Circle-Permutation-Algorithm** represent a
 
 The **PositionPure** algorithm is a high-performance, iterative approach to generating all permutations of a set. By utilizing an iterative state machine rather than traditional recursion, it significantly reduces function call overhead and optimizes CPU branch prediction efficiency.
 
-### Key Features
-* **Iterative State Machine**: Eliminates recursion depth limits and stack-related performance bottlenecks.
-* **Hardware Affinity Binding**: Includes native Windows API support (`SetThreadAffinityMask`) to lock execution to a specific logical core, minimizing context-switching noise and cache misses.
-* **High-Precision Benchmarking**: Performance is measured using the Windows High-Precision Event Timer (`QueryPerformanceCounter`) for nanosecond-level accuracy.
+The algorithm utilizes an **iterative state machine** to eliminate recursion overhead and leverages **hardware affinity binding** via the Windows API to minimize context-switching noise, with performance verified to nanosecond-level accuracy through **high-precision benchmarking**.
 
 [//]: # (UNIQUE_PP_ALGO_BENCHMARK_DATA_SECTION_START_DO_NOT_REMOVE)
 
@@ -61,7 +58,7 @@ The **PositionPure** algorithm is a high-performance, iterative approach to gene
 
 ---
 
-## Comparison with Python's Built-in itertools
+## 🚀 Comparison with Python's Built-in itertools
 
 At the request of Reddit users and other community members, a performance comparison with Python’s built-in `itertools` was conducted. Results are based on the implementation in `Position-Pure-Algorithm/python/pp_iter.py`.
 
