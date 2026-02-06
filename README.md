@@ -76,13 +76,12 @@ At the request of Reddit users and other community members, a performance compar
 ### 🐍 Position Pure Iterator Performance (PyPy)
 | N | Total Permutations | Itertools (s) | Position Pure (s) | Speed-up |
 | :--- | :--- | :--- | :--- | :--- |
-| 10 | 3,628,800 | 0.1184s | 0.0664s | **1.78x** |
-| 11 | 39,916,800 | 1.3380s | 0.5702s | **2.35x** |
-| 12 | 479,001,600 | 16.3647s | 6.6396s | **2.46x** |
-| 13 | 6,227,020,800 | 219.7339s | 85.2030s | **2.58x** |
+| 10 | 3,628,800 | 0.1096s | 0.0673s | **1.63x** |
+| 11 | 39,916,800 | 1.2321s | 0.5694s | **2.16x** |
+| 12 | 479,001,600 | 15.5455s | 6.7897s | **2.29x** |
+| 13 | 6,227,020,800 | 203.7316s | 84.9470s | **2.40x** |
 
 [//]: # (PYTHON_PP_ITER_BENCHMARK_END)
-
 
 ## 🚀 Liner rank unrank: Position Pure (PP) vs. Myrvold-Ruskey (MR) 
 [//]: # (INDUSTRIAL_PERFORMANCE_BENCHMARK_DATA_SECTION_START_DO_NOT_REMOVE)
@@ -188,7 +187,3 @@ The **Position Pure (PP)** algorithm provides a more intuitive $O(n)$ implementa
 1. **Trademark Consideration:** We found that "Position Pro" is a registered trademark in several industrial and commercial sectors. To ensure the algorithm's academic independence and avoid legal confusion, we have transitioned to a unique name.
 2. **Technical Essence (Why "Pure"?):** The name **"Pure"** more accurately describes the algorithm's technical implementation. In computer science, "pure" often implies a clean, branchless execution flow. 
 3. **Core Feature - Branchless Logic:** Unlike the base version, **Position Pure (PP)** achieves its linear-time performance through direct element-wise shifting and replacement. **It eliminates conditional branching (no `if` statements in the core loop)**, leading to a "purer" and faster execution path on modern CPUs.
-
-
-
-
