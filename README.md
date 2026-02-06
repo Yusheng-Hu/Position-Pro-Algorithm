@@ -141,7 +141,7 @@ The core C++ implementations of the algorithms can be found here:
 The following commands compile both algorithms using the same aggressive optimization flags to ensure a fair performance comparison:
 ```bash
 # Compile options
-g++ -O3 -std=c++11 -march=native -flto -ffast-math -fomit-frame-pointer
+g++ -O3 -std=c++11 -march=native -ffast-math -fomit-frame-pointer
 ```
 ---
 
