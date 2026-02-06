@@ -21,78 +21,83 @@ jobs:
           fetch-depth: 0
 
       - name: Run Benchmarks
-        # Verified subdirectory for indexing source files
         working-directory: ./PermutationIndexing
         run: |
-          # 1. Hardware detection logic
+          # 1. Hardware detection
           CPU_RAW=$(grep -m 1 "model name" /proc/cpuinfo | cut -d: -f2 | xargs)
           if [[ "$CPU_RAW" == *"AMD"* ]]; then VENDOR="AMD"; else VENDOR="INTEL"; fi
           echo "VENDOR=$VENDOR" >> $GITHUB_ENV
           
-          # 2. Compilation using high-performance flags (without -flto)
-          # Links both files to resolve 'undefined reference' errors
+          # 2. Compilation (Targeting both source files, no -flto)
           g++ -O3 -std=c++11 -march=native -ffast-math -fomit-frame-pointer \
               map_algorithm_test.cpp map_perm_algorithms.cpp -o perf_test -pthread
           
-          # 3. Generate Timestamps
+          # 3. Execution and raw log capture
+          ./perf_test > raw_output.log
+          
+          # 4. Generate metadata
           T_UTC=$(date -u +"%a %b %d %H:%M:%S %Y UTC")
           T_BJ=$(TZ=Asia/Shanghai date +"%a %b %d %H:%M:%S %Y (UTC+8)")
+          echo "RUN_INFO=**Last Run:** $T_UTC / $T_BJ" >> $GITHUB_ENV
+          echo "CPU_INFO=**Environment:** $CPU_RAW (GitHub Actions Runner)" >> $GITHUB_ENV
           
-          # 4. Initialize Markdown Table with correct alignment markers
-          echo "**Last Run:** $T_UTC / $T_BJ" > table.tmp
-          echo "**Environment:** $CPU_RAW (GitHub Actions Runner)" >> table.tmp
-          echo -e "\n| N | Dist | MR (ns/it) | PP (ns/it) | Speedup |" >> table.tmp
-          echo "|---|---|---|---|---|" >> table.tmp
-          
-          # Execute benchmark and append data to the table
-          ./perf_test >> table.tmp
-          
-          # Move to root for Python injection step
-          cp table.tmp ../table.tmp
+          # Move log to root for processing
+          cp raw_output.log ../raw_output.log
 
       - name: Inject into README via Python
         shell: python
         run: |
-          import os, sys
+          import os, sys, re
           
-          # Get vendor-specific markers
           vendor = os.environ.get('VENDOR', 'INTEL')
+          run_info = os.environ.get('RUN_INFO', '')
+          cpu_info = os.environ.get('CPU_INFO', '')
+          
           start_m = f"[//]: # (INDUSTRIAL_PERFORMANCE_BENCHMARK_DATA_SECTION_{vendor}_START)"
           end_m = f"[//]: # (INDUSTRIAL_PERFORMANCE_BENCHMARK_DATA_SECTION_{vendor}_END)"
           
-          if not os.path.exists("table.tmp"):
-              print("Error: table.tmp not found!")
+          if not os.path.exists("raw_output.log"):
+              print("Error: raw_output.log not found!")
               sys.exit(1)
               
-          with open("table.tmp", "r") as f:
-              # Ensure each line is clean for Markdown rendering
-              table_data = "\n".join([line.strip() for line in f.readlines()])
+          # Filter and transform raw output into a valid Markdown table
+          table_rows = []
+          with open("raw_output.log", "r") as f:
+              for line in f:
+                  # Capture only the data lines (starting with numbers like 1000, 100000)
+                  if re.match(r'^\d+\s+', line.strip()):
+                      # Convert multiple spaces into Markdown table format
+                      parts = line.split()
+                      if len(parts) >= 5:
+                          table_rows.append(f"| {' | '.join(parts)} |")
+          
+          # Build final Markdown content
+          header = f"{run_info}\n{cpu_info}\n\n| N | Dist | MR (ns/it) | PP (ns/it) | Speedup |\n|---|---|---|---|---|"
+          final_table = header + "\n" + "\n".join(table_rows)
           
           with open("README.md", "r", encoding="utf-8") as f:
               readme = f.read()
           
           if start_m in readme and end_m in readme:
-              print(f"Injecting benchmark data for {vendor}...")
+              print(f"Cleaning output and injecting table for {vendor}...")
               prefix, suffix = readme.split(start_m)[0], readme.split(end_m)[1]
-              new_readme = f"{prefix}{start_m}\n\n{table_data}\n\n{end_m}{suffix}"
+              new_readme = f"{prefix}{start_m}\n\n{final_table}\n\n{end_m}{suffix}"
               with open("README.md", "w", encoding="utf-8") as f:
                   f.write(new_readme)
           else:
-              print(f"Error: Markers for {vendor} not found in README.md!")
+              print(f"Error: Markers for {vendor} not found!")
               sys.exit(1)
 
       - name: Synchronized Git Push
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          
           for i in {1..5}; do
             git add README.md
-            if git commit -m "docs: sync industrial indexing report [skip ci]"; then
+            if git commit -m "docs: fix industrial indexing table format [skip ci]"; then
               git pull --rebase origin main
               if git push; then exit 0; fi
             else
-              echo "No changes to commit"
               exit 0
             fi
             sleep 10
