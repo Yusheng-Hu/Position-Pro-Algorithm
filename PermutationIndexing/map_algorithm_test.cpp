@@ -11,10 +11,26 @@
 
 using namespace std;
 
-/**
- * 接口转换适配器 (Interface Adapter)
- * 解决测试代码中 MR_rank 与算法库中 MyrvoldRuskey_rank 名称不一致的问题
- */
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <pthread.h>
+#include <sched.h>
+#include <unistd.h>
+#endif
+
+void lock_to_single_core() {
+#ifdef _WIN32
+    DWORD_PTR mask = 1;
+    SetThreadAffinityMask(GetCurrentThread(), mask);
+#else
+    cpu_set_t cpuset;
+    CPU_ZERO(&cpuset);
+    CPU_SET(0, &cpuset);
+    pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset);
+#endif
+}
+
 void MR_rank(const vector<int> &D, vector<int> &C) {
     MyrvoldRuskey_rank(D, C);
 }
@@ -23,26 +39,22 @@ void MR_unrank(const vector<int> &C, vector<int> &D) {
     MyrvoldRuskey_unrank(C, D);
 }
 
-// --- 正确性校验函数 ---
 bool verify_logic(int n) {
     vector<int> original(n), C(n), restored(n);
     iota(original.begin(), original.end(), 0);
     mt19937 g(42);
     
-    // 校验三种典型分布
     vector<string> cases = {"Sorted", "Reverse", "Random"};
     for (const auto& name : cases) {
         if (name == "Reverse") reverse(original.begin(), original.end());
         if (name == "Random") shuffle(original.begin(), original.end(), g);
 
-        // PP 校验
         PositionPure_rank(original, C);
         PositionPure_unrank(C, restored);
         for (int i = 0; i < n; ++i) {
             if (original[i] != restored[i]) return false;
         }
 
-        // MR 校验
         MR_rank(original, C);
         MR_unrank(C, restored);
         for (int i = 0; i < n; ++i) {
@@ -52,7 +64,6 @@ bool verify_logic(int n) {
     return true;
 }
 
-// --- 性能测试核心 ---
 typedef void (*RankFunc)(const vector<int>&, vector<int>&);
 
 double measure_speed(RankFunc func, int n, int its, const string& dist) {
@@ -64,7 +75,6 @@ double measure_speed(RankFunc func, int n, int its, const string& dist) {
         shuffle(D.begin(), D.end(), g);
     }
 
-    // 热身阶段
     func(D, C);
 
     auto start = chrono::high_resolution_clock::now();
@@ -78,7 +88,8 @@ double measure_speed(RankFunc func, int n, int its, const string& dist) {
 }
 
 int main() {
-    // 阶段 1: 正确性验证
+    lock_to_single_core();
+
     cout << "====================================================" << endl;
     cout << "PHASE 1: CORRECTNESS VALIDATION" << endl;
     cout << "====================================================" << endl;
@@ -90,7 +101,6 @@ int main() {
         return 1;
     }
 
-    // 阶段 2: 性能对比测试
     cout << "\n==================================================================" << endl;
     cout << "PHASE 2: INDUSTRIAL BENCHMARK (Core-Locked Recommended)" << endl;
     cout << "==================================================================" << endl;
@@ -102,7 +112,6 @@ int main() {
     vector<string> dists = {"Random", "Sorted", "Reverse"};
 
     for (int n : sizes) {
-        // 动态调整迭代次数以平衡测试精度和时间
         int its = (n <= 1000) ? 10000 : (n <= 100000 ? 500 : 50);
         
         for (const auto& d : dists) {
