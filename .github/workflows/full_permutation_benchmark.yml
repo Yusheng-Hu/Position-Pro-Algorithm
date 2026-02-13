@@ -24,8 +24,8 @@ jobs:
       - name: Compile and Run Benchmark
         run: |
           cd FullPermutation
-          g++ -O3 -march=native permpure_full.cpp -o pure_test -pthread
-          g++ -O3 -march=native heap_perm.cpp -o heap_test -pthread
+          g++ -O3 -std=c++11 -march=native -ffast-math -fomit-frame-pointer permpure_full.cpp -o pure_test -pthread
+          g++ -O3 -std=c++11 -march=native -ffast-math -fomit-frame-pointer heap_perm.cpp -o heap_test -pthread          
           
           # Detect CPU Vendor
           CPU_RAW=$(grep -m 1 "model name" /proc/cpuinfo | cut -d: -f2 | xargs)
@@ -43,7 +43,7 @@ jobs:
           echo "| N | Heap (s) | PP (s) | Speedup |" >> results.md
           echo "|---|---|---|---|" >> results.md
           
-          for n in 9 10 11 12 13 14; do
+          for n in 9 10 11 12 13; do
             H=$(./heap_test $n | grep "EXECUTION_TIME:" | awk '{print $2}')
             P=$(./pure_test $n | grep "EXECUTION_TIME:" | awk '{print $2}')
             S=$(echo "scale=2; $H / $P" | bc)
@@ -92,4 +92,5 @@ jobs:
             sleep 5
 
           done
+
 
