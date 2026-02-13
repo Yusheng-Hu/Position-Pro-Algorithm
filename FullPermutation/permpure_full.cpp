@@ -59,7 +59,7 @@ int main(int argc, char* argv[]) {
 
     unsigned long long checksum = 0;
     unsigned long long ProcessCount[200] = {0};
-    int volatile i = 0;
+    int i = 0;
     
     // Use std::vector for dynamic memory management
     std::vector<int> C(perm_size, 0);
@@ -138,4 +138,5 @@ int main(int argc, char* argv[]) {
 #endif
 
     return 0;
+
 }
