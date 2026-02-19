@@ -1,0 +1,49 @@
+name: PP Algorithm Parallel Benchmark
+
+on:
+  push:
+    paths:
+      - 'parallel/parallel_position_pure.cpp'
+  workflow_dispatch:
+
+jobs:
+  benchmark:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup MinGW
+        uses: egor-tensin/setup-mingw@v2
+        with:
+          platform: x64
+
+      - name: Compile PP Algorithm
+        run: |
+          g++ -O3 -march=native parallel/parallel_position_pure.cpp -o parallel/pp_parallel.exe
+
+      - name: Run Benchmarks
+        shell: bash
+        run: |
+          echo "### Performance Report for Position Pure (PP) Algorithm" >> $GITHUB_STEP_SUMMARY
+          echo "| N | Core | Time (s) | Throughput (B/s) | Count |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|---|---|---|" >> $GITHUB_STEP_SUMMARY
+          
+          for n in 10 11 12 13
+          do
+            echo "Running benchmark for N=$n..."
+            # Capture output and parse core-specific data
+            ./parallel/pp_parallel.exe $n > output_$n.txt
+            cat output_$n.txt
+            
+            # Extract data using grep/sed and append to summary table
+            core0_time=$(grep "Core 0: Time =" output_$n.txt | awk '{print $5}' | sed 's/s//')
+            core0_tp=$(grep "Core 0: Time =" output_$n.txt | awk '{print $8}')
+            core1_time=$(grep "Core 1: Time =" output_$n.txt | awk '{print $5}' | sed 's/s//')
+            core1_tp=$(grep "Core 1: Time =" output_$n.txt | awk '{print $8}')
+            total_count=$(grep "TOTAL COUNT:" output_$n.txt | awk '{print $3}')
+            
+            echo "| $n | Core 0 | ${core0_time} | ${core0_tp}G | - |" >> $GITHUB_STEP_SUMMARY
+            echo "| $n | Core 1 | ${core1_time} | ${core1_tp}G | ${total_count} |" >> $GITHUB_STEP_SUMMARY
+          done
