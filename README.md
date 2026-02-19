@@ -112,6 +112,12 @@ At the request of Reddit users and other community members, a performance compar
 
 [//]: # (PYTHON_PP_ITER_BENCHMARK_INTEL_END)
 
+### ⚡ Dual-Core Parallel Performance (GitHub Actions)
+
+[//]: # (DUAL_CORE_BENCHMARK_START)
+
+[//]: # (DUAL_CORE_BENCHMARK_END)
+
 
 ## 🚀 Liner rank unrank: Position Pure (PP) vs. Myrvold-Ruskey (MR) 
 
