@@ -1,4 +1,4 @@
-# GitHub Actions workflow to benchmark the Position Pure (PP) Algorithm
+# GitHub Actions workflow for Position Pure (PP) Algorithm Parallel Benchmark
 name: PP Algorithm Parallel Benchmark
 
 on:
@@ -9,46 +9,47 @@ on:
 
 jobs:
   benchmark:
-    name: Dual-Core Performance Test
+    name: Dual-Core Performance Analysis
     runs-on: windows-latest
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Configure Environment
+      - name: Setup Compiler Environment
+        # Using pre-installed MinGW on Windows runner
         run: |
           echo "C:\msys64\mingw64\bin" >> $GITHUB_PATH
 
-      - name: Compile Source Code
+      - name: Compile PP Algorithm
+        # -O3 optimization for maximum permutation generation speed
         run: |
           g++ -O3 -march=native parallel/parallel_position_pure.cpp -o parallel/pp_parallel.exe
 
-      - name: Execute Benchmarks (N=10 to 13)
+      - name: Run Benchmarks (N=10 to 13)
         shell: bash
         run: |
-          # Initialize the Markdown table
+          # Create Markdown Header for Job Summary
           echo "### Performance Report: Position Pure (PP) Algorithm" >> $GITHUB_STEP_SUMMARY
-          echo "| N | Core ID | Execution Time | Throughput (G/s) | Total Permutations |" >> $GITHUB_STEP_SUMMARY
+          echo "| N | Core ID | Execution Time | Throughput (G/s) | Total Count |" >> $GITHUB_STEP_SUMMARY
           echo "|---|---|---|---|---|" >> $GITHUB_STEP_SUMMARY
           
           for n in 10 11 12 13
           do
-            echo "Processing N=$n..."
+            echo "Benchmarking N=$n..."
             ./parallel/pp_parallel.exe $n > output_$n.txt
             
-            # Use grep to find the line, then use awk with '=' and ' ' as delimiters to pick the numbers
-            # Extract Time: looking for the value before 'fs'
+            # Robust extraction logic using multi-stage awk
+            # Grabs values based on '=' delimiter to avoid spacing issues
             c0_time=$(grep "Core 0" output_$n.txt | awk -F'=' '{print $2}' | awk '{print $1}')
-            c1_time=$(grep "Core 1" output_$n.txt | awk -F'=' '{print $2}' | awk '{print $1}')
-            
-            # Extract Throughput: looking for the value before 'G/s'
             c0_tp=$(grep "Core 0" output_$n.txt | awk -F'=' '{print $3}' | awk '{print $1}')
+            
+            c1_time=$(grep "Core 1" output_$n.txt | awk -F'=' '{print $2}' | awk '{print $1}')
             c1_tp=$(grep "Core 1" output_$n.txt | awk -F'=' '{print $3}' | awk '{print $1}')
             
             total_cnt=$(grep "TOTAL COUNT:" output_$n.txt | awk '{print $NF}')
             
-            # Append rows to summary table
+            # Fill the Markdown table
             echo "| $n | Core 0 | ${c0_time} | ${c0_tp} | - |" >> $GITHUB_STEP_SUMMARY
             echo "| $n | Core 1 | ${c1_time} | ${c1_tp} | ${total_cnt} |" >> $GITHUB_STEP_SUMMARY
           done
