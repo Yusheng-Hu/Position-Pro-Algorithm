@@ -37,18 +37,18 @@ jobs:
             echo "Processing N=$n..."
             ./parallel/pp_parallel.exe $n > output_$n.txt
             
-            # Robust extraction using sed:
-            # Matches the number between 'Time = ' and 's'
-            c0_time=$(grep "Core 0" output_$n.txt | sed -n 's/.*Time = \([0-9.]*\)s.*/\1/p')
-            # Matches the number between 'Throughput = ' and ' G/s'
-            c0_tp=$(grep "Core 0" output_$n.txt | sed -n 's/.*Throughput = \([0-9.]*\) G\/s.*/\1/p')
+            # Use grep to find the line, then use awk with '=' and ' ' as delimiters to pick the numbers
+            # Extract Time: looking for the value before 'fs'
+            c0_time=$(grep "Core 0" output_$n.txt | awk -F'=' '{print $2}' | awk '{print $1}')
+            c1_time=$(grep "Core 1" output_$n.txt | awk -F'=' '{print $2}' | awk '{print $1}')
             
-            c1_time=$(grep "Core 1" output_$n.txt | sed -n 's/.*Time = \([0-9.]*\)s.*/\1/p')
-            c1_tp=$(grep "Core 1" output_$n.txt | sed -n 's/.*Throughput = \([0-9.]*\) G\/s.*/\1/p')
+            # Extract Throughput: looking for the value before 'G/s'
+            c0_tp=$(grep "Core 0" output_$n.txt | awk -F'=' '{print $3}' | awk '{print $1}')
+            c1_tp=$(grep "Core 1" output_$n.txt | awk -F'=' '{print $3}' | awk '{print $1}')
             
             total_cnt=$(grep "TOTAL COUNT:" output_$n.txt | awk '{print $NF}')
             
-            # Write results to summary
-            echo "| $n | Core 0 | ${c0_time}s | ${c0_tp} | - |" >> $GITHUB_STEP_SUMMARY
-            echo "| $n | Core 1 | ${c1_time}s | ${c1_tp} | ${total_cnt} |" >> $GITHUB_STEP_SUMMARY
+            # Append rows to summary table
+            echo "| $n | Core 0 | ${c0_time} | ${c0_tp} | - |" >> $GITHUB_STEP_SUMMARY
+            echo "| $n | Core 1 | ${c1_time} | ${c1_tp} | ${total_cnt} |" >> $GITHUB_STEP_SUMMARY
           done
