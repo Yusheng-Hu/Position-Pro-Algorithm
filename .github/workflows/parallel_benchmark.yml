@@ -44,8 +44,8 @@ jobs:
           echo "| N | Core ID | Execution Time | Throughput (G/s) | Total Count |" >> $REPORT_FILE
           echo "|---|---|---|---|---|" >> $REPORT_FILE
           
-          # 3. Run benchmarks for N=10 to 13
-          for n in 10 11 12 13
+          # 3. Run benchmarks for N=10 to 14
+          for n in 10 11 12 13 14
           do
             echo "Processing N=$n..."
             ./parallel/pp_parallel.exe $n > output_$n.txt
