@@ -4,8 +4,8 @@ name: PP Algorithm Parallel Benchmark
 on:
   push:
     paths:
-      - 'parallel/parallel_position_pure.cpp' # Trigger only when the specific file is updated
-  workflow_dispatch: # Allow manual triggering from the Actions tab
+      - 'parallel/parallel_position_pure.cpp'
+  workflow_dispatch:
 
 jobs:
   benchmark:
@@ -17,41 +17,37 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Configure Environment
-        # Use the pre-installed MinGW on the Windows runner to avoid installation errors
         run: |
           echo "C:\msys64\mingw64\bin" >> $GITHUB_PATH
 
       - name: Compile Source Code
-        # Compile with -O3 optimization and native architecture flags for maximum performance
         run: |
           g++ -O3 -march=native parallel/parallel_position_pure.cpp -o parallel/pp_parallel.exe
 
       - name: Execute Benchmarks (N=10 to 13)
         shell: bash
         run: |
-          # Initialize the Markdown table in the GitHub Job Summary
+          # Initialize the Markdown table
           echo "### Performance Report: Position Pure (PP) Algorithm" >> $GITHUB_STEP_SUMMARY
           echo "| N | Core ID | Execution Time | Throughput (G/s) | Total Permutations |" >> $GITHUB_STEP_SUMMARY
           echo "|---|---|---|---|---|" >> $GITHUB_STEP_SUMMARY
           
-          # Iterate through the requested problem sizes
           for n in 10 11 12 13
           do
             echo "Processing N=$n..."
-            # Run the executable and capture output to a temporary file
             ./parallel/pp_parallel.exe $n > output_$n.txt
             
-            # Extract metrics using grep and awk
-            # Note: The indices ($5, $8, etc.) match the printf format in your C++ code
-            c0_time=$(grep "Core 0: Time =" output_$n.txt | awk '{print $5}')
-            c0_tp=$(grep "Core 0: Time =" output_$n.txt | awk '{print $8}')
+            # Improved parsing logic: 
+            # Use sed to extract numbers specifically between '=' and 's' or 'G/s'
+            c0_time=$(grep "Core 0" output_$n.txt | sed -n 's/.*Time = \(.*\)s |.*/\1/p')
+            c0_tp=$(grep "Core 0" output_$n.txt | sed -n 's/.*Throughput = \(.*\) G\/s.*/\1/p')
             
-            c1_time=$(grep "Core 1: Time =" output_$n.txt | awk '{print $5}')
-            c1_tp=$(grep "Core 1: Time =" output_$n.txt | awk '{print $8}')
+            c1_time=$(grep "Core 1" output_$n.txt | sed -n 's/.*Time = \(.*\)s |.*/\1/p')
+            c1_tp=$(grep "Core 1" output_$n.txt | sed -n 's/.*Throughput = \(.*\) G\/s.*/\1/p')
             
             total_cnt=$(grep "TOTAL COUNT:" output_$n.txt | awk '{print $3}')
             
-            # Append data rows to the summary table
-            echo "| $n | Core 0 | ${c0_time} | ${c0_tp} | - |" >> $GITHUB_STEP_SUMMARY
-            echo "| $n | Core 1 | ${c1_time} | ${c1_tp} | ${total_cnt} |" >> $GITHUB_STEP_SUMMARY
+            # Format rows
+            echo "| $n | Core 0 | ${c0_time}s | ${c0_tp} | - |" >> $GITHUB_STEP_SUMMARY
+            echo "| $n | Core 1 | ${c1_time}s | ${c1_tp} | ${total_cnt} |" >> $GITHUB_STEP_SUMMARY
           done
