@@ -116,6 +116,20 @@ At the request of Reddit users and other community members, a performance compar
 
 [//]: # (DUAL_CORE_BENCHMARK_START)
 
+**Last Run:** Thu Feb 19 09:51:09 UTC 2026 / Thu Feb 19 17:51:09 2026 (UTC+8)
+**Environment:** AMD EPYC 9V74 80-Core Processor                 (GitHub Actions Runner)
+
+| N | Core ID | Execution Time | Throughput (G/s) | Total Count |
+|---|---|---|---|---|
+| 10 | Core 0 | 0.0037s | 0.50 | - |
+| 10 | Core 1 | 0.0037s | 0.50 | 3628800 |
+| 11 | Core 0 | 0.0379s | 0.53 | - |
+| 11 | Core 1 | 0.0379s | 0.53 | 39916800 |
+| 12 | Core 0 | 0.4408s | 0.54 | - |
+| 12 | Core 1 | 0.4408s | 0.54 | 479001600 |
+| 13 | Core 0 | 5.4338s | 0.57 | - |
+| 13 | Core 1 | 5.4060s | 0.58 | 6227020800 |
+
 [//]: # (DUAL_CORE_BENCHMARK_END)
 
 
