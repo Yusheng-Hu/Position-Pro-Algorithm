@@ -1,5 +1,4 @@
-# GitHub Actions workflow for Position Pure (PP) Algorithm Parallel Benchmark
-name: PP Algorithm Parallel Benchmark
+name: PP Algorithm Parallel Benchmark & Auto-Update README
 
 on:
   push:
@@ -11,45 +10,85 @@ jobs:
   benchmark:
     name: Dual-Core Performance Analysis
     runs-on: windows-latest
+    permissions:
+      contents: write # 必须开启写入权限才能推送更新到仓库
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
       - name: Setup Compiler Environment
-        # Using pre-installed MinGW on Windows runner
         run: |
           echo "C:\msys64\mingw64\bin" >> $GITHUB_PATH
 
       - name: Compile PP Algorithm
-        # -O3 optimization for maximum permutation generation speed
         run: |
           g++ -O3 -march=native parallel/parallel_position_pure.cpp -o parallel/pp_parallel.exe
 
-      - name: Run Benchmarks (N=10 to 13)
+      - name: Run Benchmarks and Collect Data
         shell: bash
         run: |
-          # Create Markdown Header for Job Summary
-          echo "### Performance Report: Position Pure (PP) Algorithm" >> $GITHUB_STEP_SUMMARY
-          echo "| N | Core ID | Execution Time | Throughput (G/s) | Total Count |" >> $GITHUB_STEP_SUMMARY
-          echo "|---|---|---|---|---|" >> $GITHUB_STEP_SUMMARY
+          # 1. Prepare Metadata
+          TIMESTAMP_UTC=$(date -u)
+          TIMESTAMP_LST=$(date -d "+8 hours" "+%a %b %d %H:%M:%S %Y (UTC+8)")
+          CPU_MODEL=$(wmic cpu get name | sed -n '2p' | sed 's/[[:space:]]*$//')
           
+          # 2. Start building the content for README
+          REPORT_FILE="benchmark_summary.txt"
+          echo "**Last Run:** $TIMESTAMP_UTC / $TIMESTAMP_LST" > $REPORT_FILE
+          echo "**Environment:** $CPU_MODEL (GitHub Actions Runner)" >> $REPORT_FILE
+          echo "" >> $REPORT_FILE
+          echo "| N | Core ID | Execution Time | Throughput (G/s) | Total Count |" >> $REPORT_FILE
+          echo "|---|---|---|---|---|" >> $REPORT_FILE
+          
+          # 3. Run benchmarks (N=10 to 13)
           for n in 10 11 12 13
           do
-            echo "Benchmarking N=$n..."
             ./parallel/pp_parallel.exe $n > output_$n.txt
-            
-            # Robust extraction logic using multi-stage awk
-            # Grabs values based on '=' delimiter to avoid spacing issues
             c0_time=$(grep "Core 0" output_$n.txt | awk -F'=' '{print $2}' | awk '{print $1}')
             c0_tp=$(grep "Core 0" output_$n.txt | awk -F'=' '{print $3}' | awk '{print $1}')
-            
             c1_time=$(grep "Core 1" output_$n.txt | awk -F'=' '{print $2}' | awk '{print $1}')
             c1_tp=$(grep "Core 1" output_$n.txt | awk -F'=' '{print $3}' | awk '{print $1}')
-            
             total_cnt=$(grep "TOTAL COUNT:" output_$n.txt | awk '{print $NF}')
             
-            # Fill the Markdown table
-            echo "| $n | Core 0 | ${c0_time} | ${c0_tp} | - |" >> $GITHUB_STEP_SUMMARY
-            echo "| $n | Core 1 | ${c1_time} | ${c1_tp} | ${total_cnt} |" >> $GITHUB_STEP_SUMMARY
+            echo "| $n | Core 0 | ${c0_time} | ${c0_tp} | - |" >> $REPORT_FILE
+            echo "| $n | Core 1 | ${c1_time} | ${c1_tp} | ${total_cnt} |" >> $REPORT_FILE
           done
+
+          # 4. Show summary in GitHub Actions UI
+          cat $REPORT_FILE >> $GITHUB_STEP_SUMMARY
+
+      - name: Update README.md
+        shell: bash
+        run: |
+          # Use a marker-based replacement logic
+          START_MARKER="[//]: # (DUAL_CORE_BENCHMARK_START)"
+          END_MARKER="[//]: # (DUAL_CORE_BENCHMARK_END)"
+          
+          # Use Python for a cleaner multi-line replacement than sed
+          python -c "
+          import sys
+          with open('README.md', 'r', encoding='utf-8') as f:
+              content = f.read()
+          with open('benchmark_summary.txt', 'r', encoding='utf-8') as f:
+              summary = f.read()
+          
+          start_tag = '$START_MARKER'
+          end_tag = '$END_MARKER'
+          
+          if start_tag in content and end_tag in content:
+              new_content = content.split(start_tag)[0] + start_tag + '\n\n' + summary + '\n' + end_tag + content.split(end_tag)[1]
+              with open('README.md', 'w', encoding='utf-8') as f:
+                  f.write(new_content)
+              print('README updated successfully.')
+          else:
+              print('Markers not found in README.md')
+          "
+
+      - name: Commit and Push Changes
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add README.md
+          git commit -m "docs: auto-update parallel benchmark results [skip ci]" || echo "No changes to commit"
+          git push
