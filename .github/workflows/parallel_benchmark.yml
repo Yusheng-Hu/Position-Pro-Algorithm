@@ -1,155 +1,57 @@
-/*
- * @file parallel_position_pure.cpp
- * @brief High-performance Permutation Generation Algorithm (Parallel Implementation for 2 cores)
- * @copyright Copyright (c) 2024 [ Yusheng-Hu ]. All rights reserved.
- * @license This project is licensed under the MIT License - see the LICENSE file for details.
- * * Program Details:
- * - Implements the Position Pure (PP) Algorithm for efficient iterative permutation generation.
- * - Features: Windows CPU Affinity binding, High-precision timing (std::chrono), 
- * and optimization-resistant checksums.
- * - Performance: Designed for minimal branch misprediction and low overhead.
- * * Environment:
- * - Platform: Windows (Requires <windows.h>)
- * - Compiler: GCC/MinGW or MSVC
- * * Usage:
- * - Input perm_size via command line argument (e.g., pp.exe 10)
- */
+# GitHub Actions workflow to benchmark the Position Pure (PP) Algorithm
+name: PP Algorithm Parallel Benchmark
 
-#include <stdio.h>
-#include <windows.h>
-#include <process.h>
-#include <chrono>
+on:
+  push:
+    paths:
+      - 'parallel/parallel_position_pure.cpp' # Trigger only when the specific file is updated
+  workflow_dispatch: # Allow manual triggering from the Actions tab
 
-#define LittleNumber 5
+jobs:
+  benchmark:
+    name: Dual-Core Performance Test
+    runs-on: windows-latest
 
-// Structure to store results for each core to avoid false sharing
-struct CoreResult {
-    alignas(64) unsigned long long chk; // Checksum for verification
-    unsigned long long cnt;             // Total permutation count
-    double dt;                          // Delta time (execution duration)
-};
-CoreResult g_res[2];
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-// Arguments passed to each thread
-struct ThreadArgs {
-    int id;
-    int perm_size;
-};
+      - name: Configure Environment
+        # Use the pre-installed MinGW on the Windows runner to avoid installation errors
+        run: |
+          echo "C:\msys64\mingw64\bin" >> $GITHUB_PATH
 
-/**
- * @brief Main execution function for the PP (Position Pure) Algorithm.
- * Running in a separate thread for parallel processing.
- */
-unsigned __stdcall run_pp_fast(void* arg) {
-    ThreadArgs* args = (ThreadArgs*)arg;
-    int id = args->id;
-    int perm_size = args->perm_size;
+      - name: Compile Source Code
+        # Compile with -O3 optimization and native architecture flags for maximum performance
+        run: |
+          g++ -O3 -march=native parallel/parallel_position_pure.cpp -o parallel/pp_parallel.exe
 
-    // Set CPU affinity: Core 0 to Mask 1, Core 1 to Mask 2 (or 1 << id)
-    // Using 1 << id for better compatibility with dual-core virtual environments
-    SetThreadAffinityMask(GetCurrentThread(), (DWORD_PTR)1 << id);
-    
-    auto start_time = std::chrono::high_resolution_clock::now();
-	
-    int i = 0;
-    int C[16] = {0}; // Control array for iteration
-    int D[16] = {0}; // Data array representing the permutation
-    for (int k = 0; k < perm_size; k++) D[k] = k;
-
-    // Task allocation: Core 0 handles the first half, Core 1 handles the second half
-    // This assumes the first split is based on C[1]
-    C[1] = id;
-
-    unsigned long long local_chk = 0;
-    unsigned long long local_cnt = 0;
-
-    // Main loop of the Position Pure Algorithm
-    while (C[1] == id) {
-        for (; i < perm_size-1; ++i) {
-            D[i] = D[C[i]];
-            D[C[i]] = i;
-        }
-    
-        // Inner loop for the last element placement
-        for (int ii = 0; ii < perm_size; ii++)
-        {
-            D[perm_size-1] = D[ii];
-            D[ii] = perm_size-1;
+      - name: Execute Benchmarks (N=10 to 13)
+        shell: bash
+        run: |
+          # Initialize the Markdown table in the GitHub Job Summary
+          echo "### Performance Report: Position Pure (PP) Algorithm" >> $GITHUB_STEP_SUMMARY
+          echo "| N | Core ID | Execution Time | Throughput (G/s) | Total Permutations |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|---|---|---|" >> $GITHUB_STEP_SUMMARY
+          
+          # Iterate through the requested problem sizes
+          for n in 10 11 12 13
+          do
+            echo "Processing N=$n..."
+            # Run the executable and capture output to a temporary file
+            ./parallel/pp_parallel.exe $n > output_$n.txt
             
-            // Optimization-resistant checksum and counter
-            local_chk += D[perm_size-1];
-            local_cnt++;
+            # Extract metrics using grep and awk
+            # Note: The indices ($5, $8, etc.) match the printf format in your C++ code
+            c0_time=$(grep "Core 0: Time =" output_$n.txt | awk '{print $5}')
+            c0_tp=$(grep "Core 0: Time =" output_$n.txt | awk '{print $8}')
             
-            // Print results for small N to verify correctness
-            if (perm_size <= LittleNumber) {
-                printf("\n");
-                for (int jj = 0; jj < perm_size; jj++) {
-                    printf("%d,", D[jj]);
-                }
-            }
-            D[ii] = D[perm_size-1];
-        }
-    
-        D[C[perm_size - 2]] = D[perm_size - 2];
-    
-        // Update control array for lexicographical progression
-        C[perm_size - 2]++;
-        for (i = perm_size - 2; (i > 0) && (C[i] > i); i--) {
-            C[i] = 0;
-            C[i - 1]++;
-            D[C[i - 1] - 1] = D[i - 1];
-        }
-    }
-
-    auto end_time = std::chrono::high_resolution_clock::now();
-    g_res[id].dt = std::chrono::duration<double>(end_time - start_time).count();
-    g_res[id].chk = local_chk;
-    g_res[id].cnt = local_cnt;
-    
-    return 0;
-}
-
-int main(int argc, char* argv[]) {
-    // Validate command line arguments
-    if (argc < 2) {
-        printf("Usage: %s <n>\n", argv[0]);
-        return 1;
-    }
-    int perm_size = atoi(argv[1]);
-    if (perm_size <= 1) {
-        printf("Error: n must be greater than 1.\n");
-        return 1;
-    }
-
-    printf("N=%d PP Algorithm | Dual-Core Speed Mode\n", perm_size);
-    
-    // Calculate total expected permutations (n!)
-    unsigned long long total_perm = 1;
-    for (int k = 2; k <= perm_size; k++) total_perm *= k;
-    printf("Task: %llu permutations total.\n", total_perm);
-
-    HANDLE h[2];
-    ThreadArgs args[2] = {{0, perm_size}, {1, perm_size}};
-
-    // Create worker threads
-    h[0] = (HANDLE)_beginthreadex(NULL, 0, run_pp_fast, &args[0], 0, NULL);
-    h[1] = (HANDLE)_beginthreadex(NULL, 0, run_pp_fast, &args[1], 0, NULL);
-
-    // Wait for both cores to finish
-    WaitForMultipleObjects(2, h, TRUE, INFINITE);
-
-    // Final Performance Report
-    printf("\n--- SPEED REPORT ---\n");
-    for (int i = 0; i < 2; i++) {
-        // Throughput calculated in Billions of permutations per second (Giga-perms/s)
-        printf("Core %d: Time = %.4fs | Throughput = %.2f G/s\n", 
-               i, g_res[i].dt, (double)g_res[i].cnt / g_res[i].dt / 1e9);
-    }
-    printf("--------------------------\n");
-    printf("TOTAL COUNT:    %llu\n", g_res[0].cnt + g_res[1].cnt);
-
-    // Clean up thread handles
-    CloseHandle(h[0]); 
-    CloseHandle(h[1]);
-    return 0;
-}
+            c1_time=$(grep "Core 1: Time =" output_$n.txt | awk '{print $5}')
+            c1_tp=$(grep "Core 1: Time =" output_$n.txt | awk '{print $8}')
+            
+            total_cnt=$(grep "TOTAL COUNT:" output_$n.txt | awk '{print $3}')
+            
+            # Append data rows to the summary table
+            echo "| $n | Core 0 | ${c0_time} | ${c0_tp} | - |" >> $GITHUB_STEP_SUMMARY
+            echo "| $n | Core 1 | ${c1_time} | ${c1_tp} | ${total_cnt} |" >> $GITHUB_STEP_SUMMARY
+          done
