@@ -158,6 +158,21 @@ At the request of Reddit users and other community members, a performance compar
 
 [//]: # (INDUSTRIAL_PERFORMANCE_BENCHMARK_DATA_SECTION_INTEL_START)
 
+**Last Run:** Sat Feb 21 13:32:53 2026 UTC / Sat Feb 21 21:32:53 2026 (UTC+8)
+**Environment:** Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz (GitHub Actions Runner)
+
+| N | Dist | MR (ns/it) | PP (ns/it) | Speedup |
+|---|---|---|---|---|
+| 1000 | Random | 697.2 | 578.0 | 1.21x |
+| 1000 | Sorted | 651.1 | 476.6 | 1.37x |
+| 1000 | Reverse | 666.3 | 574.2 | 1.16x |
+| 100000 | Random | 109696.3 | 104611.9 | 1.05x |
+| 100000 | Sorted | 63265.3 | 46876.3 | 1.35x |
+| 100000 | Reverse | 69900.0 | 79963.0 | 0.87x |
+| 1000000 | Random | 2331791.2 | 2143208.0 | 1.09x |
+| 1000000 | Sorted | 712214.9 | 470972.9 | 1.51x |
+| 1000000 | Reverse | 853533.5 | 870776.9 | 0.98x |
+
 [//]: # (INDUSTRIAL_PERFORMANCE_BENCHMARK_DATA_SECTION_INTEL_END)
 
 
