@@ -116,21 +116,21 @@ At the request of Reddit users and other community members, a performance compar
 
 [//]: # (DUAL_CORE_BENCHMARK_START)
 
-**Last Run:** Sat Feb 21 13:38:29 UTC 2026 / Sat Feb 21 21:38:29 2026 (UTC+8)
+**Last Run:** Mon Feb 23 01:08:12 UTC 2026 / Mon Feb 23 09:08:12 2026 (UTC+8)
 **Environment:** AMD EPYC 7763 64-Core Processor                 (GitHub Actions Runner)
 
 | N | Core ID | Execution Time | Throughput (G/s) | Total Count |
 |---|---|---|---|---|
-| 10 | Core 0 | 0.0029s | 0.63 | - |
+| 10 | Core 0 | 0.0049s | 0.37 | - |
 | 10 | Core 1 | 0.0029s | 0.63 | 3628800 |
-| 11 | Core 0 | 0.0310s | 0.64 | - |
-| 11 | Core 1 | 0.0308s | 0.65 | 39916800 |
-| 12 | Core 0 | 0.3597s | 0.67 | - |
-| 12 | Core 1 | 0.3585s | 0.67 | 479001600 |
-| 13 | Core 0 | 4.5065s | 0.69 | - |
-| 13 | Core 1 | 4.5037s | 0.69 | 6227020800 |
-| 14 | Core 0 | 65.2698s | 0.67 | - |
-| 14 | Core 1 | 64.4870s | 0.68 | 87178291200 |
+| 11 | Core 0 | 0.0508s | 0.39 | - |
+| 11 | Core 1 | 0.0349s | 0.57 | 39916800 |
+| 12 | Core 0 | 0.4550s | 0.53 | - |
+| 12 | Core 1 | 0.4369s | 0.55 | 479001600 |
+| 13 | Core 0 | 6.7469s | 0.46 | - |
+| 13 | Core 1 | 6.3394s | 0.49 | 6227020800 |
+| 14 | Core 0 | 75.7316s | 0.58 | - |
+| 14 | Core 1 | 76.3378s | 0.57 | 87178291200 |
 
 [//]: # (DUAL_CORE_BENCHMARK_END)
 
